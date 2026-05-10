@@ -1,0 +1,8 @@
+.env
+**/metastore_db/
+**/checkpoint*/
+**/__pycache__/
+*.pyc
+.idea/
+.vscode/
+*.log

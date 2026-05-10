@@ -1,0 +1,15 @@
+{
+  "event_time": "2026-05-07T18:30:00.000Z",
+  "ingest_time": "2026-05-07T18:30:00.045Z",
+  "source": "wikimedia.eventstreams.recentchange",
+  "schema_version": "1.0",
+  "wiki": "en.wikipedia.org",
+  "title": "Apache Kafka",
+  "namespace_id": 0,
+  "event_type": "edit",
+  "user": "ExampleUser",
+  "bot": false,
+  "minor": true,
+  "comment": "/* Summary */ clarify streaming",
+  "meta_uri": "https://en.wikipedia.org/wiki/Apache_Kafka"
+}
