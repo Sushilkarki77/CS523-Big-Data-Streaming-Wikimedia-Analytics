@@ -91,20 +91,38 @@ pip install -r producer/requirements.txt
 python producer/wikimedia_kafka_producer.py --limit 10
 ```
 
-Use **Python 3.11** if possible — `kafka-python` 2.0.x can fail to import on **Python 3.12** (`kafka.vendor.six`). If you only have 3.12, rely on **`scripts/verify-producer.sh`** (Docker uses Python 3.11) or create a 3.11 venv.
+**Python version:** use **3.11.x**. The package **`kafka-python`** does **not** work reliably on **Python 3.12, 3.13, or 3.14** — you may see:
+
+`ModuleNotFoundError: No module named 'kafka.vendor.six.moves'`
+
+**Fix (pick one):**
+
+1. **Install Python 3.11** from [python.org](https://www.python.org/downloads/), then create a venv and install deps:
+   ```powershell
+   py -3.11 -m venv .venv
+   .venv\Scripts\activate
+   python -m pip install -r producer/requirements.txt
+   python producer/wikimedia_kafka_producer.py --limit 10
+   ```
+2. **Skip local Python** and use **`bash scripts/verify-producer.sh`** (Docker runs Python 3.11 — no `kafka-python` on your Windows Python needed).
 
 - Omit `--limit` to stream continuously (**Ctrl+C** to stop).
 - Ensure **`KAFKA_BOOTSTRAP_SERVERS=kafka-server:9092`** in `.env` when using the hostname fix.
 
-### Verify without local Python (Docker)
+### Docker scripts (no local Python 3.11)
 
-Uses a throwaway Python container **on the same Docker network as Kafka** (no hosts file needed):
+Both use a **Python 3.11** image on the **`kafka-server` Docker network** (no Windows hosts entry needed for **`kafka-server:9092`**).
 
-```bash
-bash scripts/verify-producer.sh 5
-```
+| Script | Command | Behavior |
+|--------|---------|----------|
+| Smoke test | `bash scripts/verify-producer.sh` | Publishes **5** messages (default), then consumes **5** via `kafka-console-consumer`. |
+| Smoke test (custom **N**) | `bash scripts/verify-producer.sh 500` | **`--limit`** and consumer **`max-messages`** = **N**. |
+| Continuous producer | `bash scripts/run-producer-docker.sh` | No default limit — streams until **Ctrl+C**. |
+| Limited run in Docker | `bash scripts/run-producer-docker.sh 100` | Same as **`--limit 100`** for testing. |
 
-This publishes **5** messages from EventStreams, then prints **5** lines from `kafka-console-consumer`.
+**`.env` in Docker:** the repo is mounted at **`/app`**. The producer’s **`load_dotenv()`** reads **`.env`** from the working directory inside the container. **`run-producer-docker.sh`** does not use **`docker --env-file`** with a host path (that breaks on **Docker Desktop for Windows** when the project path contains **spaces**). If **`.env`** is absent, the continuous-run script passes default **`-e`** values for Kafka and the stream URL.
+
+Details: **`docs/producer-wikimedia-kafka.md`** (Running with Docker).
 
 ### Where to see Kafka messages
 
@@ -118,11 +136,69 @@ docker exec kafka-server kafka-console-consumer \
 
 You should see **JSON objects** (one per line) while `wikimedia_kafka_producer.py` is running.
 
+## Phase 3 — Spark Structured Streaming (starter)
+
+The first Spark job consumes the raw Kafka topic, parses the JSON contract, and prints live window aggregates to the console.
+
+Start the producer first:
+
+```bash
+bash scripts/run-producer-docker.sh
+```
+
+Then run Spark inside `cs523bdt-lab`:
+
+```bash
+bash scripts/run-spark-streaming-console.sh
+```
+
+The job uses:
+
+- Kafka topic `bdt-wikimedia-recentchange`
+- Spark Kafka package `org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2`
+- Event-time windows from `event_time`
+- Watermarking and checkpointing at `hdfs://localhost:9000/tmp/wiki-pulse/checkpoints/console`
+- Console output for throughput and per-wiki aggregates
+
+See `spark-streaming/README.md` for overrides such as `SPARK_STARTING_OFFSETS=earliest` and shorter demo windows.
+
+## Phase 4 — Spark to Hive (starter)
+
+HiveServer2 is not required for this phase. The project uses Hive CLI inside `cs523bdt-lab` to create and query simple non-partitioned Hive tables.
+
+Create the Hive database and tables:
+
+```bash
+bash scripts/create-hive-tables.sh
+```
+
+Run the Hive-writing Spark job:
+
+```bash
+bash scripts/run-spark-streaming-hive.sh
+```
+
+Query the latest rows:
+
+```bash
+docker exec cs523bdt-lab bash -lc 'hive -e "SELECT * FROM wiki_pulse.wiki_pulse_throughput ORDER BY batch_written_at DESC LIMIT 10;"'
+docker exec cs523bdt-lab bash -lc 'hive -e "SELECT * FROM wiki_pulse.wiki_pulse_by_wiki ORDER BY batch_written_at DESC, edit_count DESC LIMIT 10;"'
+```
+
+The Hive schema lives in `sql/hive/create_wiki_pulse_tables.sql`.
+
 ## Documentation index
 
 | Doc | Purpose |
 |-----|---------|
 | `docs/implementation-plan.md` | Full phased plan |
-| `docs/team-parallel-plan.md` | Two-person roles, weekly split, RACI |
+| `docs/two-developer-plan-sushil-viz.md` | **Sushil:** source→Kafka→Spark→Hive · **Sudipto:** Hive→dashboard |
+| `docs/sink-spec.md` | Hive table/column contract (fill together) |
+| `sample-data/` | **CSV mocks** matching sink-spec (`README.md` inside) — for Sudipto before Hive is live |
+| `docs/team-parallel-plan.md` | Generic two-person roles, RACI |
 | `docs/phase0-inventory.md` | Docker ports and Kafka bootstrap |
 | `docs/kafka-message-contract.md` | Phase 1 topic and JSON schema |
+| `docs/source-data-and-metrics.md` | Explains what Wikimedia data we read and which Spark metrics we output |
+| `docs/producer-wikimedia-kafka.md` | **`wikimedia_kafka_producer.py`** functions and flow diagram |
+| `spark-streaming/README.md` | Phase 3 console job and Phase 4 Hive job |
+| `sql/hive/create_wiki_pulse_tables.sql` | Hive DDL for Phase 4 summary tables |

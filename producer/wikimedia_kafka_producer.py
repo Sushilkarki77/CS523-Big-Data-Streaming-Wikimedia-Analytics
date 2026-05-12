@@ -13,7 +13,7 @@ import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterator
+from typing import Any, Dict, Iterator, Optional
 
 from dotenv import load_dotenv
 

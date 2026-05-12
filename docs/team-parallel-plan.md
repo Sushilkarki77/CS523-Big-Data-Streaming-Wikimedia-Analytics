@@ -2,6 +2,8 @@
 
 Use this when **two teammates** work at the same time on the final pipeline. It minimizes merge conflicts and blocking dependencies.
 
+**Concrete split (Sushil → Hive + Sudipto → viz):** see **[two-developer-plan-sushil-viz.md](./two-developer-plan-sushil-viz.md)** and **[sink-spec.md](./sink-spec.md)**.
+
 **Shared handshake:** freeze **`docs/kafka-message-contract.md`**, raw topic **`bdt-wikimedia-recentchange`**, and **`schema_version`** (`1.0`) unless both agree to change them.
 
 ---
@@ -32,8 +34,8 @@ Use this when **two teammates** work at the same time on the final pipeline. It 
 
 | Responsibility | Notes |
 |----------------|--------|
-| Sink choice | **Hive** (partitioned summaries) vs **HBase** (key-value lookups) — decide once as a team |
-| Schema for downstream | Short **`docs/sink-spec.md`**: table/column names, types, partition keys, refresh expectations |
+| Sink choice | **Hive** summary tables vs **HBase** key-value lookups — decide once as a team |
+| Schema for downstream | Short **`docs/sink-spec.md`**: table/column names, types, partition/no-partition choice, refresh expectations |
 | Dashboard | Streamlit, Grafana, ELK, Tableau, or custom; polling / JDBC / agreed query path |
 | Runbook | How to start metastore DB, Hive/HBase daemons in lab, and dashboard |
 

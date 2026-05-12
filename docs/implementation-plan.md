@@ -92,7 +92,8 @@ Public API (or replay)
 **Implemented**
 
 - **`producer/wikimedia_kafka_producer.py`** — Wikimedia SSE → JSON contract → Kafka (`kafka-python`, reconnect loop, `--limit` for tests).
-- **`scripts/verify-producer.sh`** — optional Docker-based verification on `kafka-server` network.
+- **`scripts/verify-producer.sh`** — optional Docker smoke test on `kafka-server` network (default `--limit` 5).
+- **`scripts/run-producer-docker.sh`** — run the same producer in Docker **without** a default limit (continuous stream until stopped); `.env` loaded via mounted repo + `load_dotenv()` (avoids Windows **`--env-file`** issues when paths contain spaces).
 - **`producer/requirements.txt`**, README Phase 2 run instructions.
 
 **Exit criteria**
@@ -106,6 +107,12 @@ Public API (or replay)
 **Goals**
 
 - Streaming job consumes project topic; applies non-trivial transformations.
+
+**Starter implementation**
+
+- **`spark-streaming/wiki_recentchange_console.scala`** — Scala `spark-shell` Structured Streaming job that reads Kafka, parses the contract schema, applies event-time watermarks, and prints throughput plus per-wiki window aggregates.
+- **`scripts/run-spark-streaming-console.sh`** — copies the Scala script into `cs523bdt-lab` and runs it with the Spark Kafka connector package.
+- **`spark-streaming/README.md`** — Phase 3 runbook and environment overrides.
 
 **Tasks**
 
@@ -127,13 +134,21 @@ Public API (or replay)
 
 **Decision**
 
-- **HBase**: row-key design for key lookups (dashboard-friendly).
-- **Hive**: partitioned table for appended window summaries (SQL/BI-friendly).
+- Use **Hive** for Phase 4.
+- Keep the first Hive sink simple: two non-partitioned summary tables matching `docs/sink-spec.md`.
+- HBase remains unnecessary unless we later need key-value lookups.
 
 **Tasks**
 
 - Start required daemons in `cs523bdt-lab` (HiveServer2 / HBase) per lab instructions if not already running.
 - Implement Spark write path compatible with course image versions (Spark 3.1.2, Hive 3.1.2, HBase 2.2.0).
+
+**Starter implementation**
+
+- **`sql/hive/create_wiki_pulse_tables.sql`** — creates the `wiki_pulse` database plus two non-partitioned Parquet Hive tables.
+- **`scripts/create-hive-tables.sh`** — runs the DDL with Hive CLI inside `cs523bdt-lab`.
+- **`spark-streaming/wiki_recentchange_hive.scala`** — writes the same Spark aggregates to Hive.
+- **`scripts/run-spark-streaming-hive.sh`** — runs the Hive writer. HiveServer2 is not required for CLI verification.
 
 **Exit criteria**
 
