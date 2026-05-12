@@ -4,7 +4,14 @@ End-to-end pipeline: **public stream → Kafka → Spark Structured Streaming �
 
 ## Prerequisites
 
-- Docker stack running: `kafka-server`, `zookeeper-server`, `cs523bdt-lab`, `hive-metastore-db` (see `docs/phase0-inventory.md`).
+- Docker Desktop / Docker Engine running.
+- The course Docker stack already started, with these containers running:
+  - `kafka-server`
+  - `zookeeper-server`
+  - `cs523bdt-lab`
+  - `hive-metastore-db`
+- Node.js + npm installed on the host. The demo script runs `npm install` for the dashboard if `node_modules/` is missing.
+- Run commands from the repository root.
 - On **Windows**, if you run Kafka clients on the host using hostname `kafka-server`, add to `C:\Windows\System32\drivers\etc\hosts`:
 
   ```text
@@ -22,7 +29,21 @@ End-to-end pipeline: **public stream → Kafka → Spark Structured Streaming �
 
 ## One-command demo startup
 
-After the course Docker stack is already running (`kafka-server`, `zookeeper-server`, `cs523bdt-lab`, `hive-metastore-db`), start the project demo with:
+After cloning the repo, `scripts/start-demo.sh` is enough **only after** the prerequisite course Docker stack is already running.
+
+Fresh-clone checklist:
+
+```bash
+git clone <repo-url>
+cd final-project
+
+# Start the course Docker stack first, then:
+bash scripts/start-demo.sh
+```
+
+The script does **not** install Docker, start the external/course stack, or clone the repo. It does handle this project’s setup and demo processes.
+
+Start the project demo with:
 
 ```bash
 bash scripts/start-demo.sh
