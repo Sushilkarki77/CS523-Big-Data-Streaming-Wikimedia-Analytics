@@ -20,6 +20,37 @@ End-to-end pipeline: **public stream → Kafka → Spark Structured Streaming �
 | Contract | `docs/kafka-message-contract.md` |
 | Sample JSON | `docs/sample-kafka-message.json` |
 
+## One-command demo startup
+
+After the course Docker stack is already running (`kafka-server`, `zookeeper-server`, `cs523bdt-lab`, `hive-metastore-db`), start the project demo with:
+
+```bash
+bash scripts/start-demo.sh
+```
+
+This script performs setup and starts the long-running processes in the background:
+
+1. Creates the Kafka topic.
+2. Uploads the static wiki lookup CSV to HDFS for the bonus Spark join.
+3. Creates Hive tables.
+4. Starts the Wikimedia producer.
+5. Starts the Spark Structured Streaming Hive writer.
+6. Starts the Hive-to-CSV exporter loop.
+7. Starts the Node API.
+8. Starts the React dashboard.
+
+Open:
+
+```text
+http://localhost:5173
+```
+
+Logs and PID files are written under `.demo/` (gitignored). Stop demo-managed processes with:
+
+```bash
+bash scripts/stop-demo.sh
+```
+
 ### Configuration
 
 ```bash

@@ -45,7 +45,12 @@ else
   INNER="pip install -q -r producer/requirements.txt && exec python producer/wikimedia_kafka_producer.py"
 fi
 
-exec docker run --rm -it \
+DOCKER_TTY=(-i)
+if [[ -t 0 && -t 1 ]]; then
+  DOCKER_TTY=(-it)
+fi
+
+exec docker run --rm "${DOCKER_TTY[@]}" \
   -v "${ROOT}:/app" -w /app \
   --network "${NET}" \
   "${ENV_ARGS[@]}" \
