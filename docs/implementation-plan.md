@@ -167,6 +167,13 @@ Public API (or replay)
 - Pick tooling (Streamlit/Grafana/ELK/Tableau/custom).
 - Define refresh strategy (polling JDBC, query API, or exported aggregates).
 
+**Starter implementation**
+
+- **`scripts/export-hive-dashboard-data.sh`** — exports latest Hive rows into CSV snapshots.
+- **`dashboard-react/backend/`** — Node/Express API that reads CSV snapshots and serves JSON.
+- **`dashboard-react/frontend/`** — React/Vite dashboard with metric cards and charts.
+- Refresh strategy: keep the exporter running periodically; React polls the Node API.
+
 **Exit criteria**
 
 - Charts update while producer + Spark job run.

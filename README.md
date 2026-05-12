@@ -187,6 +187,40 @@ docker exec cs523bdt-lab bash -lc 'hive -e "SELECT * FROM wiki_pulse.wiki_pulse_
 
 The Hive schema lives in `sql/hive/create_wiki_pulse_tables.sql`.
 
+## Phase 5 — React dashboard (starter)
+
+The custom dashboard uses Hive as the source, exports latest Hive query results to CSV snapshots, serves them through a Node API, and renders charts in React.
+
+Export Hive data to dashboard CSVs:
+
+```bash
+bash scripts/export-hive-dashboard-data.sh
+```
+
+Run the API:
+
+```bash
+cd dashboard-react/backend
+npm install
+npm run dev
+```
+
+Run the React app:
+
+```bash
+cd dashboard-react/frontend
+npm install
+npm run dev
+```
+
+For a live demo, keep the exporter running in a loop:
+
+```bash
+while true; do bash scripts/export-hive-dashboard-data.sh; sleep 30; done
+```
+
+See `dashboard-react/README.md` for the full run order.
+
 ## Documentation index
 
 | Doc | Purpose |
@@ -202,3 +236,4 @@ The Hive schema lives in `sql/hive/create_wiki_pulse_tables.sql`.
 | `docs/producer-wikimedia-kafka.md` | **`wikimedia_kafka_producer.py`** functions and flow diagram |
 | `spark-streaming/README.md` | Phase 3 console job and Phase 4 Hive job |
 | `sql/hive/create_wiki_pulse_tables.sql` | Hive DDL for Phase 4 summary tables |
+| `dashboard-react/README.md` | Phase 5 React dashboard and Node API |

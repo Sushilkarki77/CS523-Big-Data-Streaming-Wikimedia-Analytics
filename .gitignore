@@ -6,3 +6,7 @@
 .idea/
 .vscode/
 *.log
+**/node_modules/
+**/dist/
+dashboard-react/backend/data/*.csv
+dashboard-react/backend/data/*.tmp
