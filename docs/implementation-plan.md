@@ -32,26 +32,28 @@ Build a pipeline that covers:
 
 ---
 
-## Target architecture
+## Current architecture
 
 ```text
-Public API (or replay)
-        │
-        ▼
-   Kafka producer ──► Kafka topic
-                            │
-                            ▼
-              Spark Structured Streaming (checkpointed)
-                            │
-              ┌─────────────┴─────────────┐
-              ▼                           ▼
-      [optional] Spark SQL          Static CSV on HDFS
-      join / enrichment                    │
-              └─────────────┬─────────────┘
-                            ▼
-                    HBase  OR  Hive
-                            ▼
-                      Dashboard
+Wikimedia EventStreams recentchange
+        |
+        v
+Python producer -> Kafka topic bdt-wikimedia-recentchange
+        |
+        v
+Spark Structured Streaming in cs523bdt-lab
+        |
+        +-- reads static wiki lookup CSV from HDFS (bonus)
+        |   hdfs://localhost:9000/tmp/wiki-pulse/static/wiki_project_lookup.csv
+        |
+        v
+Hive-readable Parquet summary tables
+        |
+        v
+Hive CLI export -> CSV snapshots
+        |
+        v
+Node/Express API -> React dashboard
 ```
 
 ---
@@ -63,10 +65,10 @@ Public API (or replay)
 | **0** (done) | Inventory Docker stack, verify Kafka | Documented in [phase0-inventory.md](./phase0-inventory.md); `scripts/phase0-verify.sh` passes |
 | **1** (done) | Choose stream + message contract | Topic **`bdt-wikimedia-recentchange`**; see [kafka-message-contract.md](./kafka-message-contract.md) and [README.md](../README.md) |
 | **2** (done) | Kafka producer (Part 1) | `producer/wikimedia_kafka_producer.py`; `scripts/verify-producer.sh`; README Phase 2 |
-| **3** | Spark Structured Streaming (Part 2) | `readStream` from Kafka, explicit schema, checkpoint dir, meaningful windowed/aggregate logic |
-| **4** | Persistence (Part 3) | Processed results written to HBase **or** Hive; readable by downstream query path |
-| **5** | Dashboard (Part 4) | Dashboard updates with metrics tied to Spark logic |
-| **6** | Bonus: Spark SQL + HDFS | Static file on HDFS; broadcast/small-file join; enriched fields in sink |
+| **3** (done) | Spark Structured Streaming (Part 2) | `readStream` from Kafka, explicit schema, checkpoint dir, event-time windows, watermarks, throughput/per-wiki aggregates |
+| **4** (done) | Persistence (Part 3) | Processed results written to Hive-readable Parquet tables and queryable with Hive CLI |
+| **5** (done) | Dashboard (Part 4) | React dashboard updates from Node API backed by Hive-exported CSV snapshots |
+| **6** (done) | Bonus: Spark SQL + HDFS | Static wiki lookup CSV on HDFS; Spark broadcast join; enriched project-family aggregate in Hive/dashboard |
 | **7** | Deliverables | Public GitHub repo, README end-to-end steps, ≤20 min video (Microsoft Streams) |
 
 ---
@@ -102,7 +104,7 @@ Public API (or replay)
 
 ---
 
-## Phase 3 — Spark Structured Streaming (Part 2)
+## Phase 3 — Spark Structured Streaming (Part 2) (complete)
 
 **Goals**
 
@@ -126,7 +128,7 @@ Public API (or replay)
 
 ---
 
-## Phase 4 — Sink to HBase or Hive (Part 3)
+## Phase 4 — Sink to Hive (Part 3) (complete)
 
 **Goals**
 
@@ -135,28 +137,28 @@ Public API (or replay)
 **Decision**
 
 - Use **Hive** for Phase 4.
-- Keep the first Hive sink simple: two non-partitioned summary tables matching `docs/sink-spec.md`.
+- Keep the Hive sink simple: three non-partitioned summary tables matching `docs/sink-spec.md`.
 - HBase remains unnecessary unless we later need key-value lookups.
 
 **Tasks**
 
-- Start required daemons in `cs523bdt-lab` (HiveServer2 / HBase) per lab instructions if not already running.
+- Use Hive CLI inside `cs523bdt-lab`; HiveServer2 is not required for the implemented flow.
 - Implement Spark write path compatible with course image versions (Spark 3.1.2, Hive 3.1.2, HBase 2.2.0).
 
 **Starter implementation**
 
-- **`sql/hive/create_wiki_pulse_tables.sql`** — creates the `wiki_pulse` database plus two non-partitioned Parquet Hive tables.
+- **`sql/hive/create_wiki_pulse_tables.sql`** — creates the `wiki_pulse` database plus three non-partitioned Parquet Hive tables.
 - **`scripts/create-hive-tables.sh`** — runs the DDL with Hive CLI inside `cs523bdt-lab`.
 - **`spark-streaming/wiki_recentchange_hive.scala`** — writes the same Spark aggregates to Hive.
 - **`scripts/run-spark-streaming-hive.sh`** — runs the Hive writer. HiveServer2 is not required for CLI verification.
 
 **Exit criteria**
 
-- Spot-check rows via HBase shell / Beeline or equivalent.
+- Spot-check rows via Hive CLI inside `cs523bdt-lab`.
 
 ---
 
-## Phase 5 — Dashboard (Part 4)
+## Phase 5 — Dashboard (Part 4) (complete)
 
 **Goals**
 
@@ -180,7 +182,7 @@ Public API (or replay)
 
 ---
 
-## Phase 6 — Bonus (Part 5)
+## Phase 6 — Bonus (Part 5) (complete)
 
 **Goals**
 
@@ -225,8 +227,9 @@ docs/
   implementation-plan.md      ← this file
 producer/                     # Phase 2
 spark-streaming/              # Phase 3–6
-sql/                          # Hive DDL or HBase notes
-dashboard/                    # Phase 5
+sql/hive/                     # Hive DDL
+static-data/                  # Bonus HDFS CSV source
+dashboard-react/              # Phase 5 Node API + React dashboard
 scripts/
   phase0-verify.sh
 .env.example
@@ -236,15 +239,20 @@ README.md                     # Phase 7 — full runbook
 
 ---
 
-## Immediate next steps (after this document)
+## Remaining submission steps
 
-1. Finalize **data source** and **topic name**.
-2. Add **`127.0.0.1 kafka-server`** to Windows hosts if producers run on the host.
-3. Implement **Phase 1–2**: topic + producer skeleton → live traffic into Kafka.
+1. Confirm `bash scripts/start-demo.sh` works from a clean repo with the course Docker stack already running.
+2. Record a demo walkthrough: source → Kafka → Spark → HDFS static join → Hive → CSV export → Node API → React dashboard.
+3. Push final code to the public GitHub repo.
+4. Submit the GitHub link and Microsoft Streams video.
 
 ---
 
 ## Related documentation
 
 - [phase0-inventory.md](./phase0-inventory.md) — containers, ports, Kafka bootstrap, metastore DB
+- [current-end-to-end-flow.md](./current-end-to-end-flow.md) — implemented runtime flow and demo startup
+- [source-data-and-metrics.md](./source-data-and-metrics.md) — source fields, Spark metrics, and bonus enrichment
+- [sink-spec.md](./sink-spec.md) — Hive table contract
+- [../dashboard-react/README.md](../dashboard-react/README.md) — Node/React dashboard runbook
 - Course PDF — rubric and deliverables (GitHub + Microsoft Streams video)

@@ -292,6 +292,7 @@ See `dashboard-react/README.md` for the full run order.
 | `docs/team-parallel-plan.md` | Generic two-person roles, RACI |
 | `docs/phase0-inventory.md` | Docker ports and Kafka bootstrap |
 | `docs/kafka-message-contract.md` | Phase 1 topic and JSON schema |
+| `docs/current-end-to-end-flow.md` | Current implemented runtime flow and one-command demo startup |
 | `docs/source-data-and-metrics.md` | Explains what Wikimedia data we read and which Spark metrics we output |
 | `docs/producer-wikimedia-kafka.md` | **`wikimedia_kafka_producer.py`** functions and flow diagram |
 | `spark-streaming/README.md` | Phase 3 console job and Phase 4 Hive job |

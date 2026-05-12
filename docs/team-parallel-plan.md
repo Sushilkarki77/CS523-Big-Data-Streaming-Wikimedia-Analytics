@@ -1,6 +1,6 @@
 # Two-person parallel work plan
 
-Use this when **two teammates** work at the same time on the final pipeline. It minimizes merge conflicts and blocking dependencies.
+Use this when **two teammates** work at the same time on the final pipeline. This document now reflects the implemented split: Sushil owns producer/Spark/Hive, and Sudipto can consume the Node/React dashboard or the Hive-exported CSV/API outputs.
 
 **Concrete split (Sushil → Hive + Sudipto → viz):** see **[two-developer-plan-sushil-viz.md](./two-developer-plan-sushil-viz.md)** and **[sink-spec.md](./sink-spec.md)**.
 
@@ -13,7 +13,7 @@ Use this when **two teammates** work at the same time on the final pipeline. It 
 | Track | Primary owner | Repo areas (suggested) |
 |-------|----------------|-------------------------|
 | **Ingestion & streaming** | Person A | `producer/`, `spark-streaming/` (create when adding Spark job), checkpoint paths documented in README |
-| **Storage & visualization** | Person B | `dashboard/`, `sql/` (Hive DDL / HBase notes), optional `docs/sink-spec.md` |
+| **Storage & visualization** | Person B | `dashboard-react/`, `sample-data/`, dashboard polish, demo story |
 
 ---
 
@@ -24,24 +24,24 @@ Use this when **two teammates** work at the same time on the final pipeline. It 
 | Producer reliability | Reconnect, backoff, logging; env via `.env` / `.env.example` |
 | Spark streaming job | Kafka subscribe, `from_json` + explicit schema, watermarks if event-time windows |
 | Checkpoints | Path on HDFS (or agreed durable path in lab); document in README |
-| Bonus (optional) | Static CSV on HDFS + Spark SQL join — often fits this track after base job works |
+| Bonus | Static CSV on HDFS + Spark SQL/DataFrame broadcast join — implemented via `static-data/wiki_project_lookup.csv` |
 
 **Definition of done:** Live JSON on the raw topic; Spark job runs in **`cs523bdt-lab`** and produces **aggregates** (console or sink) matching whatever Person B expects for storage/dashboard.
 
 ---
 
-## Person B — Sink (Hive or HBase) & dashboard
+## Person B — Dashboard and demo polish
 
 | Responsibility | Notes |
 |----------------|--------|
-| Sink choice | **Hive** summary tables vs **HBase** key-value lookups — decide once as a team |
-| Schema for downstream | Short **`docs/sink-spec.md`**: table/column names, types, partition/no-partition choice, refresh expectations |
-| Dashboard | Streamlit, Grafana, ELK, Tableau, or custom; polling / JDBC / agreed query path |
-| Runbook | How to start metastore DB, Hive/HBase daemons in lab, and dashboard |
+| Sink choice | **Hive** summary tables — implemented as non-partitioned Parquet-backed Hive tables |
+| Schema for downstream | **`docs/sink-spec.md`**: table/column names, types, no-partition choice, CSV/API refresh path |
+| Dashboard | Custom React app with Node/Express API reading Hive-exported CSV snapshots |
+| Runbook | `README.md` and `dashboard-react/README.md` |
 
-**Parallel unblock:** If Spark → sink is not ready, Person B can build the dashboard against **mock CSV** or **manual inserts** that match the agreed **aggregate schema**.
+**Parallel unblock:** Person B can still build/test dashboard changes against `sample-data/`; the live path uses CSV snapshots in `dashboard-react/backend/data/`.
 
-**Definition of done:** Tables (or HBase rows) populated from Spark or verified manually; dashboard updates from that layer.
+**Definition of done:** Hive tables are populated from Spark, CSV snapshots update from Hive, and dashboard charts update from the Node API.
 
 ---
 
@@ -56,8 +56,8 @@ Frozen contract + topic  →  A: producer + Spark  →  agreed aggregate shape (
 | Week | Person A | Person B |
 |------|-----------|-----------|
 | **1** | Producer stable; Spark reads Kafka + parses + windows (console OK) | Sink DDL / table design; **`docs/sink-spec.md`**; dashboard shell + mock data |
-| **2** | Spark writes to Hive/HBase per sink-spec | Wire dashboard to real queries |
-| **3** | Bonus join; checkpoint hardening | Polish visuals; README “storage + UI” sections |
+| **2** | Spark writes to Hive per sink-spec | Wire dashboard to Node API / CSV snapshots |
+| **3** | Bonus join + checkpoint hardening | Polish visuals; README “storage + UI” sections |
 
 Adjust dates to your course deadline.
 
@@ -80,8 +80,9 @@ Adjust dates to your course deadline.
 |-------------|---------|
 | Stream → Kafka | A |
 | Spark streaming + checkpoints | A |
-| Hive/HBase design + DDL | B |
+| Hive design + DDL | A |
 | Dashboard + demo story | B |
+| Bonus static HDFS join | A |
 | End-to-end integration test | Both |
 | Final README + video outline | Both (split sections, joint demo) |
 
@@ -89,8 +90,8 @@ Adjust dates to your course deadline.
 
 ## If one person finishes early
 
-- **A free:** Help B with JDBC/Hive queries, sink column alignment, or troubleshooting Spark writes.
-- **B free:** Manual Parquet/Hive load from sample aggregates, improve **`docs/phase0-inventory.md`** troubleshooting, or record draft demo clips.
+- **A free:** Help B with API payloads, CSV export cadence, or troubleshooting Spark/Hive writes.
+- **B free:** Improve React visuals, dashboard copy, screenshots, or record draft demo clips.
 
 ---
 

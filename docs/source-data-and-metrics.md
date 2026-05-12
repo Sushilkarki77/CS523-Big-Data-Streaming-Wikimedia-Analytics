@@ -17,7 +17,10 @@ Kafka topic: bdt-wikimedia-recentchange
 Spark Structured Streaming
         |
         v
-Windowed metrics for Hive and dashboard
+Hive-readable Parquet tables
+        |
+        v
+CSV snapshots -> Node API -> React dashboard
 ```
 
 ## What we read
@@ -99,9 +102,7 @@ Simplified Kafka message example:
 
 ## What Spark produces
 
-Spark reads the Kafka topic continuously and turns raw event records into time-windowed metrics.
-
-The current Phase 3 Spark job outputs two metric shapes to the console. In Phase 4, these same shapes will be written to Hive.
+Spark reads the Kafka topic continuously and turns raw event records into time-windowed metrics. The console job prints these metrics for Phase 3 validation; the Hive job writes the same metrics, plus the bonus enrichment metric, into Hive-readable Parquet table locations.
 
 ## Metric 1: Throughput over time
 
@@ -211,7 +212,9 @@ They also align with the course pipeline:
 - Kafka stores the raw stream.
 - Spark performs streaming transformations, aggregations, and the bonus static-data join.
 - Hive will store processed summary tables.
-- The dashboard will query those summary tables.
+- The exporter snapshots Hive rows into CSV files.
+- The Node API reads those CSV snapshots.
+- The React dashboard polls the Node API.
 
 ## Current implementation
 
@@ -222,4 +225,8 @@ Relevant files:
 - `spark-streaming/wiki_recentchange_console.scala`: reads Kafka and produces Phase 3 console metrics.
 - `spark-streaming/wiki_recentchange_hive.scala`: writes Hive metrics and performs the bonus HDFS CSV join.
 - `static-data/wiki_project_lookup.csv`: static lookup uploaded to HDFS for the bonus join.
-- `docs/sink-spec.md`: draft Hive table contract for Phase 4.
+- `sql/hive/create_wiki_pulse_tables.sql`: Hive table DDL.
+- `scripts/export-hive-dashboard-data.sh`: exports Hive results to dashboard CSV snapshots.
+- `dashboard-react/backend/`: Node API reading CSV snapshots.
+- `dashboard-react/frontend/`: React dashboard.
+- `docs/sink-spec.md`: Hive table contract.

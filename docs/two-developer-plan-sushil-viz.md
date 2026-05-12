@@ -1,9 +1,9 @@
 # Two-developer plan — Sushil (source → Hive) + Sudipto (Hive → visualization)
 
-This document is the **working agreement** for splitting the final pipeline when:
+This document is the **working agreement** for splitting and demoing the current final pipeline:
 
 - **Sushil** owns **ingestion through persistence**: public stream → **Kafka** → **Spark Structured Streaming** → **Hive**.
-- **Sudipto** owns **consumption for insights**: read **from Hive** (or exported Parquet/CSV from Hive) → **dashboard / charts**.
+- **Sudipto** owns **consumption for insights**: consume Hive-exported CSV/API data → **React dashboard / charts**.
 
 Everything else (Docker lab, message contract, producer) stays as documented in **`kafka-message-contract.md`**, **`phase0-inventory.md`**, and **`implementation-plan.md`**.
 
@@ -14,15 +14,15 @@ Everything else (Docker lab, message contract, producer) stays as documented in 
 | Rule | Detail |
 |------|--------|
 | **Contract freeze** | Raw Kafka JSON follows **`docs/kafka-message-contract.md`** (`schema_version` `1.0`). Breaking changes require **both** devs notified and Spark + viz updated together. |
-| **Integration handshake** | **`docs/sink-spec.md`** is the **single source of truth** for **Hive database name, table names, column names, types, partitions**. Sushil proposes first revision; **Sudipto** confirms viz feasibility before Sushil locks writes. |
+| **Integration handshake** | **`docs/sink-spec.md`** is the **single source of truth** for **Hive database name, table names, column names, types, and no-partition choice**. CSV/API payloads should match that schema. |
 | **Environment** | **`cs523bdt-lab`** for Spark + Hive CLI; **`kafka-server`** for Kafka; **`hive-metastore-db`** Postgres backs metastore (see **`phase0-inventory.md`**). |
-| **Git / repo** | Sushil: `producer/`, `spark-streaming/` (create when adding jobs). **Sudipto:** `dashboard/`, `sql/` (DDL). Small PRs; avoid editing the same large file simultaneously without coordination. |
+| **Git / repo** | Sushil: `producer/`, `spark-streaming/`, `sql/`, `static-data/`, `scripts/`. **Sudipto:** `dashboard-react/`, dashboard styling, demo story. Small PRs; avoid editing the same large file simultaneously without coordination. |
 
 ---
 
 ## Interface: what lands in Hive (must be agreed early)
 
-**Sudipto** cannot build final charts without knowing **exact** query shapes. Agree on **one or two** Hive tables that Spark **appends** on a schedule.
+**Sudipto** can build final charts from the Node API / CSV snapshots once the Hive table shapes are fixed.
 
 ### Recommended minimum (dashboard-friendly)
 
@@ -34,9 +34,9 @@ Everything else (Docker lab, message contract, producer) stays as documented in 
 | `window_end` | `TIMESTAMP` | end of bucket | Optional if redundant |
 | `edit_count` | `BIGINT` | total edits in window | Global across all wikis |
 | `bot_edit_count` | `BIGINT` | optional | For bot vs human charts |
-| `ingest_batch_ts` | `TIMESTAMP` | when Spark wrote row | Debugging |
+| `batch_written_at` | `TIMESTAMP` | when Spark wrote row | Debugging / latest snapshot selection |
 
-Partition (optional): `dt` = `DATE` derived from `window_start` for pruning.
+Partitioning: none in the current implementation.
 
 **Table B — rankings** (for bar / donut charts), e.g. refresh every window or every N minutes
 
@@ -45,11 +45,21 @@ Partition (optional): `dt` = `DATE` derived from `window_start` for pruning.
 | `window_start` | `TIMESTAMP` | aligns with Table A windows |
 | `wiki` | `STRING` | `meta.domain` style domain |
 | `edit_count` | `BIGINT` | counts per wiki in that window |
-| `rank` | `INT` | optional top-N helper |
+| `batch_written_at` | `TIMESTAMP` | latest snapshot selection |
 
-Sudipto may query **latest window only** for “top wikis right now,” or **last 24 buckets** for trends.
+Sudipto may use **latest `batch_written_at`** for “top wikis right now,” or recent throughput rows for trends.
 
-**Deliverable:** Fill in **`docs/sink-spec.md`** with real database name (`wikidata_analytics` or similar), **exact** `CREATE TABLE` stubs, and **location** (`hdfs://.../warehouse/...`) once known.
+**Table C — project-family counts** (bonus HDFS static join)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `window_start` | `TIMESTAMP` | aligns with Table A windows |
+| `window_end` | `TIMESTAMP` | end of bucket |
+| `project_family` | `STRING` | joined from `static-data/wiki_project_lookup.csv` |
+| `edit_count` | `BIGINT` | counts per family in that window |
+| `batch_written_at` | `TIMESTAMP` | latest snapshot selection |
+
+**Deliverable:** Keep **`docs/sink-spec.md`**, `sql/hive/create_wiki_pulse_tables.sql`, and dashboard CSV/API fields aligned.
 
 ---
 
@@ -57,7 +67,7 @@ Sudipto may query **latest window only** for “top wikis right now,” or **las
 
 ### Scope
 
-Source → **Kafka producer** (already in repo) → **Spark Structured Streaming** → **Hive** (managed tables or external Parquet + Hive DDL).
+Source → **Kafka producer** → **Spark Structured Streaming** → **HDFS static CSV join** → **Hive-readable Parquet tables**.
 
 ### Phase A — Confirm upstream (short)
 
@@ -90,15 +100,15 @@ Source → **Kafka producer** (already in repo) → **Spark Structured Streaming
 
 | # | Task | Done when |
 |---|------|-----------|
-| D1 | Export sample query file **`sql/sample_queries.sql`** for Sudipto | Example `SELECT` for charts 1–3 |
-| D2 | Joint test: producer + Spark + Hive + Sudipto reads | Row counts move over 15–30 min demo |
+| D1 | Export CSV snapshots with `scripts/export-hive-dashboard-data.sh` | `dashboard-react/backend/data/*.csv` update |
+| D2 | Joint test: producer + Spark + Hive + API + React | Row counts move over 15–30 min demo |
 
-### Optional bonus (course +2)
+### Bonus (course +2)
 
 | # | Task |
 |---|------|
-| E1 | Static CSV on **HDFS**; **broadcast join** in Spark before Hive write |
-| E2 | Extra Hive columns from enrichment documented in **`sink-spec`** |
+| E1 | Static CSV on **HDFS**; **broadcast join** in Spark before Hive write — implemented |
+| E2 | Extra Hive table `wiki_pulse_by_project_family` documented in **`sink-spec`** |
 
 ---
 
@@ -106,24 +116,24 @@ Source → **Kafka producer** (already in repo) → **Spark Structured Streaming
 
 ### Scope
 
-Assume **Hive holds authoritative aggregates** produced by Sushil. Sudipto’s visualization does **not** read Kafka directly unless course explicitly requires it.
+Assume **Hive holds authoritative aggregates** produced by Sushil. The dashboard consumes CSV snapshots exported from Hive via the Node API; it does **not** read Kafka directly.
 
 ### Phase A — Schema and connectivity
 
 | # | Task | Done when |
 |---|------|-----------|
 | T1 | Review **`docs/sink-spec.md`** with Sushil; request changes **before** heavy Spark work | Locked column list |
-| T2 | Choose stack: **Streamlit**, **Grafana**, **Superset**, **Tableau**, etc. | Tool installs documented |
-| T3 | Connect to Hive: **HiveServer2 / JDBC**, **Spark Thrift**, or **periodic CSV export** from agreed path | Test query returns rows |
+| T2 | Use stack: **Node/Express + React/Vite + Recharts** | Tool installs documented |
+| T3 | Consume `http://localhost:4000/api/dashboard` from React | Test API returns rows |
 
 ### Phase B — Dashboard build (parallel while Sushil finishes Spark)
 
 | # | Task | Done when |
 |---|------|-----------|
-| T4 | **Mock dashboard** using static CSV matching **`sink-spec`** | Charts render with fake data |
+| T4 | **Mock dashboard** using `sample-data/` fallback matching **`sink-spec`** | Charts render with fake data |
 | T5 | **Chart 1 — Throughput:** line chart from Table A (`window_start`, `edit_count`) | Updates when new rows appear |
 | T6 | **Chart 2 — Top wikis:** bar chart from Table B (latest window or sliding) | Clear labels (`wiki`) |
-| T7 | **Chart 3 — Bot vs human or event mix:** use `bot_edit_count` / totals or extra columns | Matches Spark logic |
+| T7 | **Chart 3 — Project family bonus:** use `wiki_pulse_by_project_family` | Matches Spark HDFS CSV join |
 
 ### Phase C — Polish and demo
 
@@ -158,7 +168,7 @@ Suggested pacing if **~2–3 weeks** remain:
 
 | Risk | Mitigation |
 |------|------------|
-| Hive/HBase services not started in lab | Both follow instructor steps; Sushil verifies `SHOW TABLES` before promising sink |
+| Hive tables or HDFS paths not ready | Run `scripts/upload-static-wiki-lookup.sh` and `scripts/create-hive-tables.sh`; verify with Hive CLI before demo |
 | Schema drift | Only change **`sink-spec`** with paired PR |
 | Sudipto blocked on Hive access | Sushil exports **nightly Parquet** or CSV snapshot to shared path as fallback |
 | Kafka advertised host (`kafka-server`) | Producer/Spark run **inside lab container** or hosts file on Windows host |
