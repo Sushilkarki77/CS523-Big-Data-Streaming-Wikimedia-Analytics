@@ -56,6 +56,26 @@ Update this file whenever **table names**, **columns**, or refresh expectations 
 
 ---
 
+## Table 3 — Project-family counts (bonus enrichment)
+
+**Purpose:** Dashboard chart showing the Spark join with static HDFS CSV metadata.
+
+**Table name:** `wiki_pulse_by_project_family`
+
+| Column | Spark/Hive type | Nullable | Description |
+|--------|-----------------|----------|-------------|
+| `window_start` | `TIMESTAMP` | N | Aligns with Table 1 |
+| `window_end` | `TIMESTAMP` | Y | End of tumbling window |
+| `project_family` | `STRING` | N | Joined from `static-data/wiki_project_lookup.csv`, e.g. `Wikipedia`, `Wikidata`, `Commons`, `Other` |
+| `edit_count` | `BIGINT` | N | Events for that project family in the window |
+| `batch_written_at` | `TIMESTAMP` | N | Processing-time when Spark wrote this snapshot row |
+
+**Partition:** none.
+
+**Static HDFS lookup:** `/tmp/wiki-pulse/static/wiki_project_lookup.csv`
+
+---
+
 ## Sample queries for visualization (Sudipto)
 
 ```sql
@@ -64,6 +84,9 @@ Update this file whenever **table names**, **columns**, or refresh expectations 
 
 -- Top wikis in latest written batch
 -- SELECT wiki, edit_count FROM wiki_pulse.wiki_pulse_by_wiki WHERE batch_written_at = (SELECT MAX(batch_written_at) FROM wiki_pulse.wiki_pulse_by_wiki) ORDER BY edit_count DESC LIMIT 15;
+
+-- Bonus: top project families from latest written batch
+-- SELECT project_family, edit_count FROM wiki_pulse.wiki_pulse_by_project_family WHERE batch_written_at = (SELECT MAX(batch_written_at) FROM wiki_pulse.wiki_pulse_by_project_family) ORDER BY edit_count DESC LIMIT 10;
 ```
 
 These queries assume the simple non-partitioned Hive tables above.
@@ -76,6 +99,7 @@ Until Spark writes to Hive, use the files in **`sample-data/`**:
 
 - **`sample-data/wiki_pulse_throughput_sample.csv`** — same columns as Table 1  
 - **`sample-data/wiki_pulse_by_wiki_sample.csv`** — same columns as Table 2  
+- **`sample-data/wiki_pulse_by_project_family_sample.csv`** — same columns as Table 3
 
 See **`sample-data/README.md`** for chart hints and a small **pandas** load example.
 

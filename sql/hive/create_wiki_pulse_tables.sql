@@ -19,3 +19,12 @@ CREATE TABLE IF NOT EXISTS wiki_pulse_by_wiki (
   batch_written_at TIMESTAMP
 )
 STORED AS PARQUET;
+
+CREATE TABLE IF NOT EXISTS wiki_pulse_by_project_family (
+  window_start TIMESTAMP,
+  window_end TIMESTAMP,
+  project_family STRING,
+  edit_count BIGINT,
+  batch_written_at TIMESTAMP
+)
+STORED AS PARQUET;

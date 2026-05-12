@@ -153,6 +153,49 @@ Dashboard idea:
 - Bar chart of top Wikimedia projects by activity.
 - Latest-window ranking of most active projects.
 
+## Bonus enrichment: project family lookup
+
+For the bonus requirement, Spark also reads a static CSV from HDFS:
+
+```text
+hdfs://localhost:9000/tmp/wiki-pulse/static/wiki_project_lookup.csv
+```
+
+Source file in the repo:
+
+```text
+static-data/wiki_project_lookup.csv
+```
+
+The CSV maps `wiki` domains to metadata:
+
+- `project_family`: Wikipedia, Wikidata, Commons, Wiktionary, etc.
+- `language`: language code or `multilingual`.
+- `region`: broad region label for demo-friendly grouping.
+
+Spark broadcasts this static lookup and joins it with the streaming events on `wiki`.
+
+## Metric 3: Project families
+
+Purpose: show the result of the static HDFS CSV join by grouping enriched stream records.
+
+Output columns:
+
+- `window_start`: start of the event-time window.
+- `window_end`: end of the event-time window.
+- `project_family`: value from the static CSV lookup, or `Other` when not matched.
+- `edit_count`: number of events for that family in the window.
+- `batch_written_at`: when Spark wrote this snapshot row to Hive.
+
+Example output:
+
+```text
+window_start          project_family  edit_count  batch_written_at
+2026-05-12 00:28:00   Wikipedia       720         2026-05-12 00:28:50
+2026-05-12 00:28:00   Commons         286         2026-05-12 00:28:50
+2026-05-12 00:28:00   Wikidata        172         2026-05-12 00:28:50
+```
+
 ## Why these metrics are useful
 
 These metrics answer simple, demo-friendly questions:
@@ -160,12 +203,13 @@ These metrics answer simple, demo-friendly questions:
 - How active is Wikimedia right now?
 - Is activity increasing or decreasing over time?
 - Which Wikimedia projects are generating the most events?
+- Which high-level project family is most active after enrichment?
 - How much of the activity is from bots?
 
 They also align with the course pipeline:
 
 - Kafka stores the raw stream.
-- Spark performs streaming transformations and aggregations.
+- Spark performs streaming transformations, aggregations, and the bonus static-data join.
 - Hive will store processed summary tables.
 - The dashboard will query those summary tables.
 
@@ -176,4 +220,6 @@ Relevant files:
 - `producer/wikimedia_kafka_producer.py`: reads Wikimedia SSE and writes Kafka JSON.
 - `docs/kafka-message-contract.md`: defines the Kafka message schema.
 - `spark-streaming/wiki_recentchange_console.scala`: reads Kafka and produces Phase 3 console metrics.
+- `spark-streaming/wiki_recentchange_hive.scala`: writes Hive metrics and performs the bonus HDFS CSV join.
+- `static-data/wiki_project_lookup.csv`: static lookup uploaded to HDFS for the bonus join.
 - `docs/sink-spec.md`: draft Hive table contract for Phase 4.

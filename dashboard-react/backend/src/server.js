@@ -78,6 +78,16 @@ function normalizeByWiki(row) {
   };
 }
 
+function normalizeProjectFamily(row) {
+  return {
+    window_start: row.window_start,
+    window_end: row.window_end,
+    project_family: row.project_family,
+    edit_count: Number(row.edit_count || 0),
+    batch_written_at: row.batch_written_at,
+  };
+}
+
 function latestByBatch(rows) {
   if (rows.length === 0) return null;
   return rows.reduce((latest, row) =>
@@ -85,9 +95,21 @@ function latestByBatch(rows) {
   );
 }
 
-function summarize(throughputRows, byWikiRows) {
+function newestBatchRows(rows) {
+  const latestBatch = rows.reduce(
+    (latest, row) => (!latest || String(row.batch_written_at) > String(latest) ? row.batch_written_at : latest),
+    null
+  );
+
+  return rows
+    .filter((row) => !latestBatch || row.batch_written_at === latestBatch)
+    .sort((a, b) => b.edit_count - a.edit_count);
+}
+
+function summarize(throughputRows, byWikiRows, projectFamilyRows) {
   const latestThroughput = latestByBatch(throughputRows);
   const topWiki = byWikiRows[0] ?? null;
+  const topFamily = projectFamilyRows[0] ?? null;
   const latestTotal = latestThroughput?.edit_count ?? 0;
   const latestBots = latestThroughput?.bot_edit_count ?? 0;
 
@@ -101,27 +123,24 @@ function summarize(throughputRows, byWikiRows) {
     latest_bot_percentage: latestTotal ? Number(((latestBots / latestTotal) * 100).toFixed(1)) : 0,
     top_wiki: topWiki?.wiki ?? null,
     top_wiki_edit_count: topWiki?.edit_count ?? 0,
+    top_project_family: topFamily?.project_family ?? null,
+    top_project_family_edit_count: topFamily?.edit_count ?? 0,
   };
 }
 
 async function loadDashboardData() {
-  const [throughputCsv, byWikiCsv] = await Promise.all([
+  const [throughputCsv, byWikiCsv, projectFamilyCsv] = await Promise.all([
     readCsv("throughput_latest.csv", "wiki_pulse_throughput_sample.csv"),
     readCsv("by_wiki_latest.csv", "wiki_pulse_by_wiki_sample.csv"),
+    readCsv("project_family_latest.csv", "wiki_pulse_by_project_family_sample.csv"),
   ]);
 
   const throughput = throughputCsv.rows
     .map(normalizeThroughput)
     .sort((a, b) => String(a.window_start).localeCompare(String(b.window_start)));
 
-  const byWikiRows = byWikiCsv.rows.map(normalizeByWiki);
-  const latestByWikiBatch = byWikiRows.reduce(
-    (latest, row) => (!latest || String(row.batch_written_at) > String(latest) ? row.batch_written_at : latest),
-    null
-  );
-  const byWiki = byWikiRows
-    .filter((row) => !latestByWikiBatch || row.batch_written_at === latestByWikiBatch)
-    .sort((a, b) => b.edit_count - a.edit_count);
+  const byWiki = newestBatchRows(byWikiCsv.rows.map(normalizeByWiki));
+  const projectFamily = newestBatchRows(projectFamilyCsv.rows.map(normalizeProjectFamily));
 
   return {
     generated_at: new Date().toISOString(),
@@ -137,10 +156,16 @@ async function loadDashboardData() {
         updated_at: byWikiCsv.updatedAt,
         using_fallback: byWikiCsv.usingFallback,
       },
+      project_family: {
+        path: projectFamilyCsv.source,
+        updated_at: projectFamilyCsv.updatedAt,
+        using_fallback: projectFamilyCsv.usingFallback,
+      },
     },
-    summary: summarize(throughput, byWiki),
+    summary: summarize(throughput, byWiki, projectFamily),
     throughput,
     by_wiki: byWiki,
+    project_family: projectFamily,
   };
 }
 
@@ -179,6 +204,15 @@ app.get("/api/top-wikis", async (_req, res, next) => {
   try {
     const data = await loadDashboardData();
     res.json({ rows: data.by_wiki, source: data.sources.by_wiki });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/project-families", async (_req, res, next) => {
+  try {
+    const data = await loadDashboardData();
+    res.json({ rows: data.project_family, source: data.sources.project_family });
   } catch (error) {
     next(error);
   }

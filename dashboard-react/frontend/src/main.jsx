@@ -86,6 +86,7 @@ function Dashboard() {
 
   const throughput = data?.throughput ?? [];
   const byWiki = data?.by_wiki ?? [];
+  const projectFamily = data?.project_family ?? [];
   const summary = data?.summary ?? {};
 
   const chartThroughput = throughput.map((row) => ({
@@ -113,6 +114,7 @@ function Dashboard() {
       <section className="status-row">
         <SourceBadge source={data?.sources?.throughput} />
         <SourceBadge source={data?.sources?.by_wiki} />
+        <SourceBadge source={data?.sources?.project_family} />
         <span className="badge">polls every {Math.round(REFRESH_MS / 1000)}s</span>
       </section>
 
@@ -136,6 +138,11 @@ function Dashboard() {
           label="Top project"
           value={summary.top_wiki || "n/a"}
           hint={`${formatNumber(summary.top_wiki_edit_count)} events`}
+        />
+        <MetricCard
+          label="Top family"
+          value={summary.top_project_family || "n/a"}
+          hint={`${formatNumber(summary.top_project_family_edit_count)} events after HDFS CSV join`}
         />
       </section>
 
@@ -175,6 +182,26 @@ function Dashboard() {
               <YAxis dataKey="wiki" type="category" width={170} />
               <Tooltip />
               <Bar dataKey="edit_count" name="Events" fill="#10b981" radius={[0, 8, 8, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <h2>Bonus: Project Families</h2>
+            <p>Stream rows enriched by a static HDFS CSV lookup and grouped by project family.</p>
+          </div>
+        </div>
+        <div className="chart">
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={projectFamily.slice(0, 12)}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="project_family" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="edit_count" name="Events" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

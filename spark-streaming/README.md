@@ -14,6 +14,7 @@ This folder contains the Spark jobs for the final project. They consume the raw 
 - **Throughput:** total edit/event count per event-time window.
 - **Bot count:** count of records where `bot=true` in the same window.
 - **Per-wiki counts:** counts by `wiki` per event-time window, sorted by newest window and highest count in each micro-batch.
+- **Bonus enrichment:** reads `static-data/wiki_project_lookup.csv` from HDFS, broadcasts it, joins on `wiki`, and aggregates by `project_family`.
 
 Defaults:
 
@@ -29,6 +30,7 @@ Defaults:
 | Checkpoint root | `hdfs://localhost:9000/tmp/wiki-pulse/checkpoints/console` |
 
 The Hive job uses `hdfs://localhost:9000/tmp/wiki-pulse/checkpoints/hive` by default.
+The bonus static lookup path is `hdfs://localhost:9000/tmp/wiki-pulse/static/wiki_project_lookup.csv`.
 
 ## Phase 3: Run console output
 
@@ -54,6 +56,12 @@ Create the Hive database and tables:
 bash scripts/create-hive-tables.sh
 ```
 
+Upload the static CSV lookup for the bonus Spark SQL/DataFrame join:
+
+```bash
+bash scripts/upload-static-wiki-lookup.sh
+```
+
 Start the producer in another terminal:
 
 ```bash
@@ -70,12 +78,14 @@ The Hive job writes append-style snapshot rows into:
 
 - `wiki_pulse.wiki_pulse_throughput`
 - `wiki_pulse.wiki_pulse_by_wiki`
+- `wiki_pulse.wiki_pulse_by_project_family`
 
 Read the tables with Hive CLI:
 
 ```bash
 docker exec cs523bdt-lab bash -lc 'hive -e "SELECT * FROM wiki_pulse.wiki_pulse_throughput ORDER BY batch_written_at DESC LIMIT 10;"'
 docker exec cs523bdt-lab bash -lc 'hive -e "SELECT * FROM wiki_pulse.wiki_pulse_by_wiki ORDER BY batch_written_at DESC, edit_count DESC LIMIT 10;"'
+docker exec cs523bdt-lab bash -lc 'hive -e "SELECT * FROM wiki_pulse.wiki_pulse_by_project_family ORDER BY batch_written_at DESC, edit_count DESC LIMIT 10;"'
 ```
 
 ## Useful overrides

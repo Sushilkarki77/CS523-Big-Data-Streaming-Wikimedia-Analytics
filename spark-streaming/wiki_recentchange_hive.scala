@@ -20,6 +20,7 @@ val triggerInterval = sys.env.getOrElse("SPARK_TRIGGER_INTERVAL", "30 seconds")
 val hiveDatabase = sys.env.getOrElse("HIVE_DATABASE", "wiki_pulse")
 val throughputTable = s"$hiveDatabase.wiki_pulse_throughput"
 val byWikiTable = s"$hiveDatabase.wiki_pulse_by_wiki"
+val byProjectFamilyTable = s"$hiveDatabase.wiki_pulse_by_project_family"
 val throughputPath = sys.env.getOrElse(
   "HIVE_THROUGHPUT_PATH",
   "hdfs://localhost:9000/user/hive/warehouse/wiki_pulse.db/wiki_pulse_throughput"
@@ -27,6 +28,14 @@ val throughputPath = sys.env.getOrElse(
 val byWikiPath = sys.env.getOrElse(
   "HIVE_BY_WIKI_PATH",
   "hdfs://localhost:9000/user/hive/warehouse/wiki_pulse.db/wiki_pulse_by_wiki"
+)
+val byProjectFamilyPath = sys.env.getOrElse(
+  "HIVE_BY_PROJECT_FAMILY_PATH",
+  "hdfs://localhost:9000/user/hive/warehouse/wiki_pulse.db/wiki_pulse_by_project_family"
+)
+val staticWikiLookupPath = sys.env.getOrElse(
+  "STATIC_WIKI_LOOKUP_PATH",
+  "hdfs://localhost:9000/tmp/wiki-pulse/static/wiki_project_lookup.csv"
 )
 val shufflePartitions = spark.conf.get("spark.sql.shuffle.partitions")
 
@@ -43,10 +52,24 @@ println(
      |  shufflePartitions= $shufflePartitions
      |  throughputTable  = $throughputTable
      |  byWikiTable      = $byWikiTable
+     |  familyTable      = $byProjectFamilyTable
      |  throughputPath   = $throughputPath
      |  byWikiPath       = $byWikiPath
+     |  familyPath       = $byProjectFamilyPath
+     |  staticLookupPath = $staticWikiLookupPath
      |""".stripMargin
 )
+
+val wikiLookup = spark.read
+  .option("header", "true")
+  .csv(staticWikiLookupPath)
+  .select(
+    col("wiki"),
+    col("project_family"),
+    col("language"),
+    col("region")
+  )
+  .dropDuplicates("wiki")
 
 val eventSchema = new StructType()
   .add("event_time", StringType, nullable = false)
@@ -88,7 +111,13 @@ val parsedEvents = kafkaRecords
 
 val watermarkedEvents = parsedEvents.withWatermark("event_ts", watermarkDelay)
 
-val throughput = watermarkedEvents
+val enrichedEvents = watermarkedEvents
+  .join(broadcast(wikiLookup), Seq("wiki"), "left")
+  .withColumn("project_family", coalesce(col("project_family"), lit("Other")))
+  .withColumn("language", coalesce(col("language"), lit("unknown")))
+  .withColumn("region", coalesce(col("region"), lit("unknown")))
+
+val throughput = enrichedEvents
   .groupBy(window(col("event_ts"), windowDuration))
   .agg(
     count(lit(1)).as("edit_count"),
@@ -101,13 +130,23 @@ val throughput = watermarkedEvents
     col("bot_edit_count")
   )
 
-val byWiki = watermarkedEvents
+val byWiki = enrichedEvents
   .groupBy(window(col("event_ts"), windowDuration), col("wiki"))
   .agg(count(lit(1)).as("edit_count"))
   .select(
     col("window.start").as("window_start"),
     col("window.end").as("window_end"),
     col("wiki"),
+    col("edit_count")
+  )
+
+val byProjectFamily = enrichedEvents
+  .groupBy(window(col("event_ts"), windowDuration), col("project_family"))
+  .agg(count(lit(1)).as("edit_count"))
+  .select(
+    col("window.start").as("window_start"),
+    col("window.end").as("window_end"),
+    col("project_family"),
     col("edit_count")
   )
 
@@ -150,6 +189,20 @@ val byWikiQuery = byWiki.writeStream
   .trigger(Trigger.ProcessingTime(triggerInterval))
   .foreachBatch { (batchDF: DataFrame, batchId: Long) =>
     writeHiveSnapshot(byWikiTable, byWikiPath, Seq(col("window_start").desc, col("edit_count").desc))(batchDF, batchId)
+  }
+  .start()
+
+val byProjectFamilyQuery = byProjectFamily.writeStream
+  .queryName("wiki_pulse_by_project_family_hive")
+  .outputMode("update")
+  .option("checkpointLocation", s"$checkpointRoot/by-project-family")
+  .trigger(Trigger.ProcessingTime(triggerInterval))
+  .foreachBatch { (batchDF: DataFrame, batchId: Long) =>
+    writeHiveSnapshot(
+      byProjectFamilyTable,
+      byProjectFamilyPath,
+      Seq(col("window_start").desc, col("edit_count").desc)
+    )(batchDF, batchId)
   }
   .start()
 

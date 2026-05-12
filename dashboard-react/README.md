@@ -49,6 +49,7 @@ Generated files:
 ```text
 dashboard-react/backend/data/throughput_latest.csv
 dashboard-react/backend/data/by_wiki_latest.csv
+dashboard-react/backend/data/project_family_latest.csv
 ```
 
 ## Run backend
@@ -65,6 +66,7 @@ http://localhost:4000/api/health
 http://localhost:4000/api/dashboard
 http://localhost:4000/api/throughput
 http://localhost:4000/api/top-wikis
+http://localhost:4000/api/project-families
 ```
 
 If exported CSVs do not exist yet, the API falls back to `sample-data/` so the UI can still load.
@@ -91,7 +93,10 @@ VITE_API_BASE_URL=http://localhost:4000 VITE_REFRESH_MS=15000 npm run dev
 ## Demo run order
 
 1. `bash scripts/run-producer-docker.sh`
-2. `bash scripts/run-spark-streaming-hive.sh`
-3. `while true; do bash scripts/export-hive-dashboard-data.sh; sleep 30; done`
-4. `cd dashboard-react/backend && npm run dev`
-5. `cd dashboard-react/frontend && npm run dev`
+2. `bash scripts/upload-static-wiki-lookup.sh`
+3. `bash scripts/run-spark-streaming-hive.sh`
+4. `while true; do bash scripts/export-hive-dashboard-data.sh; sleep 30; done`
+5. `cd dashboard-react/backend && npm run dev`
+6. `cd dashboard-react/frontend && npm run dev`
+
+The Project Families chart is the bonus view: Spark joins the live stream to the static HDFS CSV lookup and groups by `project_family`.

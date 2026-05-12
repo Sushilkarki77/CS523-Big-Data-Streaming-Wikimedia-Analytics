@@ -172,6 +172,12 @@ Create the Hive database and tables:
 bash scripts/create-hive-tables.sh
 ```
 
+Upload the static lookup CSV to HDFS for the bonus Spark join:
+
+```bash
+bash scripts/upload-static-wiki-lookup.sh
+```
+
 Run the Hive-writing Spark job:
 
 ```bash
@@ -183,9 +189,11 @@ Query the latest rows:
 ```bash
 docker exec cs523bdt-lab bash -lc 'hive -e "SELECT * FROM wiki_pulse.wiki_pulse_throughput ORDER BY batch_written_at DESC LIMIT 10;"'
 docker exec cs523bdt-lab bash -lc 'hive -e "SELECT * FROM wiki_pulse.wiki_pulse_by_wiki ORDER BY batch_written_at DESC, edit_count DESC LIMIT 10;"'
+docker exec cs523bdt-lab bash -lc 'hive -e "SELECT * FROM wiki_pulse.wiki_pulse_by_project_family ORDER BY batch_written_at DESC, edit_count DESC LIMIT 10;"'
 ```
 
 The Hive schema lives in `sql/hive/create_wiki_pulse_tables.sql`.
+The bonus static lookup lives in `static-data/wiki_project_lookup.csv` and is uploaded to HDFS at `/tmp/wiki-pulse/static/wiki_project_lookup.csv`.
 
 ## Phase 5 — React dashboard (starter)
 
@@ -237,3 +245,4 @@ See `dashboard-react/README.md` for the full run order.
 | `spark-streaming/README.md` | Phase 3 console job and Phase 4 Hive job |
 | `sql/hive/create_wiki_pulse_tables.sql` | Hive DDL for Phase 4 summary tables |
 | `dashboard-react/README.md` | Phase 5 React dashboard and Node API |
+| `static-data/wiki_project_lookup.csv` | Static HDFS CSV lookup used for the bonus Spark join |

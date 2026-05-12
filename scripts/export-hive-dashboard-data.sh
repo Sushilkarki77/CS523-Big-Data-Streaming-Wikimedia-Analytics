@@ -9,6 +9,7 @@
 #   HIVE_DATABASE           default: wiki_pulse
 #   THROUGHPUT_LIMIT        default: 100
 #   TOP_WIKI_LIMIT          default: 25
+#   PROJECT_FAMILY_LIMIT    default: 25
 
 set -euo pipefail
 export MSYS_NO_PATHCONV=1
@@ -25,13 +26,16 @@ DATA_DIR="${DASHBOARD_DATA_DIR:-${ROOT}/dashboard-react/backend/data}"
 HIVE_DATABASE="${HIVE_DATABASE:-wiki_pulse}"
 THROUGHPUT_LIMIT="${THROUGHPUT_LIMIT:-100}"
 TOP_WIKI_LIMIT="${TOP_WIKI_LIMIT:-25}"
+PROJECT_FAMILY_LIMIT="${PROJECT_FAMILY_LIMIT:-25}"
 
 mkdir -p "$DATA_DIR"
 
 THROUGHPUT_TMP="${DATA_DIR}/throughput_latest.csv.tmp"
 BY_WIKI_TMP="${DATA_DIR}/by_wiki_latest.csv.tmp"
+PROJECT_FAMILY_TMP="${DATA_DIR}/project_family_latest.csv.tmp"
 THROUGHPUT_OUT="${DATA_DIR}/throughput_latest.csv"
 BY_WIKI_OUT="${DATA_DIR}/by_wiki_latest.csv"
+PROJECT_FAMILY_OUT="${DATA_DIR}/project_family_latest.csv"
 
 run_hive_csv_query() {
   local query="$1"
@@ -72,6 +76,23 @@ FROM (
 ) t;
 "
 
+PROJECT_FAMILY_QUERY="
+SET hive.cli.print.header=false;
+SELECT concat_ws(',',
+  regexp_replace(CAST(window_start AS STRING), ' ', 'T'),
+  regexp_replace(CAST(window_end AS STRING), ' ', 'T'),
+  project_family,
+  CAST(edit_count AS STRING),
+  regexp_replace(CAST(batch_written_at AS STRING), ' ', 'T')
+)
+FROM (
+  SELECT window_start, window_end, project_family, edit_count, batch_written_at
+  FROM ${HIVE_DATABASE}.wiki_pulse_by_project_family
+  ORDER BY batch_written_at DESC, edit_count DESC
+  LIMIT ${PROJECT_FAMILY_LIMIT}
+) t;
+"
+
 {
   echo "window_start,window_end,edit_count,bot_edit_count,batch_written_at"
   run_hive_csv_query "$THROUGHPUT_QUERY"
@@ -82,9 +103,16 @@ FROM (
   run_hive_csv_query "$BY_WIKI_QUERY"
 } > "$BY_WIKI_TMP"
 
+{
+  echo "window_start,window_end,project_family,edit_count,batch_written_at"
+  run_hive_csv_query "$PROJECT_FAMILY_QUERY"
+} > "$PROJECT_FAMILY_TMP"
+
 mv "$THROUGHPUT_TMP" "$THROUGHPUT_OUT"
 mv "$BY_WIKI_TMP" "$BY_WIKI_OUT"
+mv "$PROJECT_FAMILY_TMP" "$PROJECT_FAMILY_OUT"
 
 echo "Exported dashboard CSV snapshots:"
 echo "  ${THROUGHPUT_OUT}"
 echo "  ${BY_WIKI_OUT}"
+echo "  ${PROJECT_FAMILY_OUT}"

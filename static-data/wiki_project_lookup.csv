@@ -1,0 +1,32 @@
+wiki,project_family,language,region
+en.wikipedia.org,Wikipedia,en,Global
+fr.wikipedia.org,Wikipedia,fr,Europe
+de.wikipedia.org,Wikipedia,de,Europe
+es.wikipedia.org,Wikipedia,es,Global
+it.wikipedia.org,Wikipedia,it,Europe
+pl.wikipedia.org,Wikipedia,pl,Europe
+pt.wikipedia.org,Wikipedia,pt,Global
+ru.wikipedia.org,Wikipedia,ru,Europe
+ja.wikipedia.org,Wikipedia,ja,Asia
+ko.wikipedia.org,Wikipedia,ko,Asia
+zh.wikipedia.org,Wikipedia,zh,Asia
+ar.wikipedia.org,Wikipedia,ar,Middle East
+ur.wikipedia.org,Wikipedia,ur,Asia
+ce.wikipedia.org,Wikipedia,ce,Europe
+ro.wikipedia.org,Wikipedia,ro,Europe
+sr.wikipedia.org,Wikipedia,sr,Europe
+uz.wikipedia.org,Wikipedia,uz,Asia
+ta.wikipedia.org,Wikipedia,ta,Asia
+yo.wikipedia.org,Wikipedia,yo,Africa
+commons.wikimedia.org,Commons,multilingual,Global
+www.wikidata.org,Wikidata,multilingual,Global
+meta.wikimedia.org,Meta,multilingual,Global
+species.wikimedia.org,Wikispecies,multilingual,Global
+en.wiktionary.org,Wiktionary,en,Global
+ar.wiktionary.org,Wiktionary,ar,Middle East
+vi.wiktionary.org,Wiktionary,vi,Asia
+eo.wiktionary.org,Wiktionary,eo,Global
+en.wikinews.org,Wikinews,en,Global
+en.wikivoyage.org,Wikivoyage,en,Global
+ru.wikiquote.org,Wikiquote,ru,Europe
+zh.wikisource.org,Wikisource,zh,Asia

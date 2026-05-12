@@ -191,6 +191,13 @@ Public API (or replay)
 - Document HDFS path and upload commands (`hdfs dfs -put`).
 - Use broadcast join when reference data is small.
 
+**Starter implementation**
+
+- **`static-data/wiki_project_lookup.csv`** — static wiki metadata keyed by `wiki`.
+- **`scripts/upload-static-wiki-lookup.sh`** — uploads the lookup to HDFS at `/tmp/wiki-pulse/static/wiki_project_lookup.csv`.
+- **`spark-streaming/wiki_recentchange_hive.scala`** — reads the HDFS CSV, broadcasts it, joins streaming events by `wiki`, and writes `wiki_pulse_by_project_family`.
+- **`dashboard-react/frontend/`** — displays the bonus project-family aggregate.
+
 **Exit criteria**
 
 - Enriched columns visible in storage or dashboard.

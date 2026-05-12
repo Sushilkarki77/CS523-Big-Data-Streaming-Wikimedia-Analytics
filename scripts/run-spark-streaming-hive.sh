@@ -16,6 +16,8 @@
 #   HIVE_DATABASE            default: wiki_pulse
 #   HIVE_THROUGHPUT_PATH     default: hdfs://localhost:9000/user/hive/warehouse/wiki_pulse.db/wiki_pulse_throughput
 #   HIVE_BY_WIKI_PATH        default: hdfs://localhost:9000/user/hive/warehouse/wiki_pulse.db/wiki_pulse_by_wiki
+#   HIVE_BY_PROJECT_FAMILY_PATH default: hdfs://localhost:9000/user/hive/warehouse/wiki_pulse.db/wiki_pulse_by_project_family
+#   STATIC_WIKI_LOOKUP_PATH  default: hdfs://localhost:9000/tmp/wiki-pulse/static/wiki_project_lookup.csv
 
 set -euo pipefail
 export MSYS_NO_PATHCONV=1
@@ -60,10 +62,15 @@ SPARK_SHUFFLE_PARTITIONS="${SPARK_SHUFFLE_PARTITIONS:-4}"
 HIVE_DATABASE="${HIVE_DATABASE:-wiki_pulse}"
 HIVE_THROUGHPUT_PATH="${HIVE_THROUGHPUT_PATH:-hdfs://localhost:9000/user/hive/warehouse/wiki_pulse.db/wiki_pulse_throughput}"
 HIVE_BY_WIKI_PATH="${HIVE_BY_WIKI_PATH:-hdfs://localhost:9000/user/hive/warehouse/wiki_pulse.db/wiki_pulse_by_wiki}"
+HIVE_BY_PROJECT_FAMILY_PATH="${HIVE_BY_PROJECT_FAMILY_PATH:-hdfs://localhost:9000/user/hive/warehouse/wiki_pulse.db/wiki_pulse_by_project_family}"
+STATIC_WIKI_LOOKUP_PATH="${STATIC_WIKI_LOOKUP_PATH:-hdfs://localhost:9000/tmp/wiki-pulse/static/wiki_project_lookup.csv}"
 SPARK_KAFKA_PACKAGE="${SPARK_KAFKA_PACKAGE:-org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2}"
 
 echo "Ensuring Hive tables exist..."
 bash scripts/create-hive-tables.sh
+
+echo "Ensuring static wiki lookup exists on HDFS..."
+bash scripts/upload-static-wiki-lookup.sh
 
 echo "Copying Spark Hive job into cs523bdt-lab: ${APP_DEST}"
 docker exec -i cs523bdt-lab bash -lc "mkdir -p '${APP_DEST_DIR}' && cat > '${APP_DEST}'" < "${APP_SRC}"
@@ -76,6 +83,8 @@ echo "  checkpoint: ${SPARK_CHECKPOINT_DIR}"
 echo "  hive database: ${HIVE_DATABASE}"
 echo "  throughput path: ${HIVE_THROUGHPUT_PATH}"
 echo "  by-wiki path: ${HIVE_BY_WIKI_PATH}"
+echo "  by-project-family path: ${HIVE_BY_PROJECT_FAMILY_PATH}"
+echo "  static lookup path: ${STATIC_WIKI_LOOKUP_PATH}"
 
 DOCKER_TTY=(-i)
 if [[ -t 0 && -t 1 ]]; then
@@ -94,5 +103,7 @@ exec docker exec "${DOCKER_TTY[@]}" \
   -e HIVE_DATABASE="${HIVE_DATABASE}" \
   -e HIVE_THROUGHPUT_PATH="${HIVE_THROUGHPUT_PATH}" \
   -e HIVE_BY_WIKI_PATH="${HIVE_BY_WIKI_PATH}" \
+  -e HIVE_BY_PROJECT_FAMILY_PATH="${HIVE_BY_PROJECT_FAMILY_PATH}" \
+  -e STATIC_WIKI_LOOKUP_PATH="${STATIC_WIKI_LOOKUP_PATH}" \
   cs523bdt-lab bash -lc \
   "spark-shell --master local[2] --packages '${SPARK_KAFKA_PACKAGE}' --conf spark.sql.session.timeZone=UTC -i '${APP_DEST}'"
