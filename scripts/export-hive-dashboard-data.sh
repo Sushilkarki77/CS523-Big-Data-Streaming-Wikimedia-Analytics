@@ -104,6 +104,12 @@ run_hive_csv_query() {
   rm -f "$log_file"
 }
 
+# --- Hive export queries (read-only; see docs/hive-dashboard-export.md) ---
+# Each query: inner SELECT = newest LIMIT rows from wiki_pulse.* ;
+# outer SELECT concat_ws = one CSV data line per row; timestamps space→T for ISO parsing.
+# Shell adds CSV header + writes *.csv.tmp then mv to throughput_latest.csv etc.
+
+# Table: wiki_pulse_throughput → throughput_latest.csv (throughput chart, bot/human totals)
 THROUGHPUT_QUERY="
 SET hive.cli.print.header=false;
 SELECT concat_ws(',',
@@ -121,6 +127,7 @@ FROM (
 ) t;
 "
 
+# Table: wiki_pulse_by_wiki → by_wiki_latest.csv (top wikis bar chart)
 BY_WIKI_QUERY="
 SET hive.cli.print.header=false;
 SELECT concat_ws(',',
@@ -138,6 +145,7 @@ FROM (
 ) t;
 "
 
+# Table: wiki_pulse_by_project_family → project_family_latest.csv (bonus join chart)
 PROJECT_FAMILY_QUERY="
 SET hive.cli.print.header=false;
 SELECT concat_ws(',',

@@ -60,7 +60,7 @@ flowchart LR
 | **Stream processing** | Read Kafka as a stream, parse JSON, watermark, window, aggregate; optional broadcast join to static lookup. | `spark-streaming/wiki_recentchange_hive/`, `scripts/run-spark-streaming-hive.sh` |
 | **Static enrichment (bonus)** | Dimension table for wiki → project family (and related columns). | `static-data/wiki_project_lookup.csv`, `scripts/upload-static-wiki-lookup.sh` |
 | **Warehouse** | Managed tables pointing at HDFS locations; Spark appends Parquet files compatible with Hive. | `sql/hive/create_wiki_pulse_tables.sql`, DB `wiki_pulse` |
-| **Serving** | Pollable files + REST JSON for the UI. | `scripts/export-hive-dashboard-data.sh`, `dashboard-react/backend`, `dashboard-react/frontend` |
+| **Serving** | Pollable files + REST JSON for the UI. | `scripts/export-hive-dashboard-data.sh`, `scripts/export-hive-dashboard-loop.sh`, `dashboard-react/backend`, `dashboard-react/frontend` |
 
 ## Data flow (one sentence per hop)
 
@@ -73,7 +73,7 @@ flowchart LR
 ## Key integration choices
 
 - **Spark writes Parquet to table directories** rather than relying on catalog-only paths, so **Hive CLI sees the same files** Spark produces.
-- **Dashboard freshness** is bounded by the export loop interval (see `scripts/export-hive-dashboard-loop.sh` and `scripts/start.sh`).
+- **Dashboard freshness** is bounded by the export loop interval (default 120s; see [`hive-dashboard-export.md`](hive-dashboard-export.md), `scripts/export-hive-dashboard-loop.sh`, and `scripts/start.sh`).
 - **Course Docker stack** provides Kafka, Zookeeper, the lab image (Spark + Hive client tooling), and Hive metastore DB; this repo’s scripts assume those containers are already up.
 
 ## Related documentation
@@ -81,6 +81,10 @@ flowchart LR
 | Topic | Document |
 |-------|----------|
 | Runbook | [`README.md`](../README.md) |
+| Producer (SSE → Kafka) | [`kafka-producer-flow.md`](kafka-producer-flow.md) |
+| Spark (Kafka → Hive) | [`spark-streaming-flow.md`](spark-streaming-flow.md) |
+| Hive → CSV → dashboard | [`hive-dashboard-export.md`](hive-dashboard-export.md) |
+| Hive → React chart data | [`hive-to-react-charts.md`](hive-to-react-charts.md) |
 | Kafka JSON fields | [`kafka-message-contract.md`](kafka-message-contract.md) |
 | Hive table schemas and metrics | [`sink-spec.md`](sink-spec.md) |
 | What we read vs what we compute | [`source-data-and-metrics.md`](source-data-and-metrics.md) |
