@@ -3,7 +3,11 @@
 # Requires: Docker, running container named kafka-server.
 
 set -euo pipefail
-export MSYS_NO_PATHCONV=1
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/common.sh
+source "${SCRIPT_DIR}/lib/common.sh"
+wiki_pulse_platform_init
 
 TOPIC="${KAFKA_TOPIC_RAW:-bdt-wikimedia-recentchange}"
 BOOTSTRAP="${KAFKA_BOOTSTRAP_INTERNAL:-localhost:9092}"

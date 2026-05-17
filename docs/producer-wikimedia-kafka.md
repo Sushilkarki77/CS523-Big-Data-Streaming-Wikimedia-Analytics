@@ -164,7 +164,7 @@ CLI entry point:
 
 ## Running with Docker (no local Python 3.11)
 
-Two helper scripts attach a **`python:3.11-slim-bookworm`** container to the **same Docker network** as **`kafka-server`** (hostname **`kafka-server:9092`** works inside that network; no Windows hosts file needed).
+Two helper scripts attach a **`python:3.11-slim-bookworm`** container to the **same Docker network** as **`kafka-server`** (hostname **`kafka-server:9092`** works inside that network; no hosts file change on macOS, Linux, or Windows when using Docker).
 
 | Script | Purpose |
 |--------|---------|

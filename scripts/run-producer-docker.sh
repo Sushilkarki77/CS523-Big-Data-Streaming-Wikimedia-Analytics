@@ -8,14 +8,19 @@
 # Prerequisites: kafka-server container running. Copy .env.example → .env (optional but recommended).
 
 set -euo pipefail
-export MSYS_NO_PATHCONV=1
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/common.sh
+source "${SCRIPT_DIR}/lib/common.sh"
+wiki_pulse_platform_init
+
+ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "$ROOT"
 
-NET="$(docker inspect kafka-server --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' 2>/dev/null || true)"
+wiki_pulse_require_container kafka-server
+NET="$(wiki_pulse_docker_network kafka-server)"
 if [[ -z "${NET}" ]]; then
-  echo "ERROR: kafka-server container not found. Start your Docker stack first."
+  echo "ERROR: could not detect Docker network for kafka-server."
   exit 1
 fi
 
@@ -25,9 +30,8 @@ if [[ -n "${LIMIT}" ]] && ! [[ "${LIMIT}" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-# Do not use `docker --env-file` with host paths: Docker Desktop on Windows fails when the path
-# contains spaces (e.g. "New folder"). The repo is mounted at /app; python-dotenv loads `.env` from
-# cwd (/app) inside the container automatically.
+# Do not use `docker --env-file` with host paths on Windows (paths with spaces break).
+# The repo is mounted at /app; python-dotenv loads `.env` from cwd inside the container.
 ENV_ARGS=()
 if [[ ! -f "${ROOT}/.env" ]]; then
   ENV_ARGS=(

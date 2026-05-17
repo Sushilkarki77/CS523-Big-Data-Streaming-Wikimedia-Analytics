@@ -8,9 +8,13 @@
 #   STATIC_WIKI_LOOKUP_HDFS_PATH default: /tmp/wiki-pulse/static/wiki_project_lookup.csv
 
 set -euo pipefail
-export MSYS_NO_PATHCONV=1
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/common.sh
+source "${SCRIPT_DIR}/lib/common.sh"
+wiki_pulse_platform_init
+
+ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "$ROOT"
 
 SRC="${ROOT}/static-data/wiki_project_lookup.csv"

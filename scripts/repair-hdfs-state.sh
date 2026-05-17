@@ -8,7 +8,11 @@
 #   bash scripts/repair-hdfs-state.sh --reset
 
 set -euo pipefail
-export MSYS_NO_PATHCONV=1
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/common.sh
+source "${SCRIPT_DIR}/lib/common.sh"
+wiki_pulse_platform_init
 
 MODE="${1:---check}"
 HIVE_DATABASE="${HIVE_DATABASE:-wiki_pulse}"

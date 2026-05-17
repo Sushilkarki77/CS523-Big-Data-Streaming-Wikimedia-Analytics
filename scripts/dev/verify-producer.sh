@@ -3,14 +3,19 @@
 # Prerequisites: Docker running, kafka-server container up; optional .env with KAFKA_* (passed into container).
 
 set -euo pipefail
-export MSYS_NO_PATHCONV=1
 
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=../lib/common.sh
+source "${SCRIPT_DIR}/../lib/common.sh"
+wiki_pulse_platform_init
+
+ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "$ROOT"
 
-NET="$(docker inspect kafka-server --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' 2>/dev/null || true)"
+wiki_pulse_require_container kafka-server
+NET="$(wiki_pulse_docker_network kafka-server)"
 if [[ -z "${NET}" ]]; then
-  echo "ERROR: kafka-server container not found. Start your Docker stack first."
+  echo "ERROR: could not detect Docker network for kafka-server."
   exit 1
 fi
 

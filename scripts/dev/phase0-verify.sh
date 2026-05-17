@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# Phase 0 regression checks. Run from Git Bash on Windows.
-# Uses MSYS_NO_PATHCONV so Docker exec paths are not rewritten.
+# Phase 0 regression checks (macOS, Linux, or Windows Git Bash).
 
 set -euo pipefail
-export MSYS_NO_PATHCONV=1
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=../lib/common.sh
+source "${SCRIPT_DIR}/../lib/common.sh"
+wiki_pulse_platform_init
 
 echo "== Docker containers (expect kafka-server, zookeeper-server, cs523bdt-lab, hive-metastore-db) =="
 docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"

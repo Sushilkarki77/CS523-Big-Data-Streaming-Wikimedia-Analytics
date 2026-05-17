@@ -6,9 +6,13 @@
 #   SKIP_HDFS_REPAIR_CHECK=1 bash scripts/setup.sh
 
 set -euo pipefail
-export MSYS_NO_PATHCONV=1
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/common.sh
+source "${SCRIPT_DIR}/lib/common.sh"
+wiki_pulse_platform_init
+
+ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "$ROOT"
 
 if ! docker inspect cs523bdt-lab >/dev/null 2>&1; then

@@ -61,7 +61,7 @@ flowchart TB
 | Step | Code behavior |
 |------|----------------|
 | Strict mode | `set -euo pipefail` — exit on error, unset variables, pipe failures |
-| Path fix (Windows) | `MSYS_NO_PATHCONV=1` — avoids Git Bash rewriting HDFS paths |
+| Path fix (Windows Git Bash) | `scripts/lib/common.sh` sets `MSYS_NO_PATHCONV` when needed; no change on macOS/Linux |
 | Project root | `cd` to repo root (parent of `scripts/`) |
 | Optional `.env` | If `.env` exists, `source` it so `KAFKA_*`, `SPARK_*`, `HIVE_*` overrides apply |
 

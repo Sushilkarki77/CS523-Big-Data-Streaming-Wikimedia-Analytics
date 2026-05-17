@@ -27,12 +27,30 @@ bash scripts/stop-everything.sh
 
 ## Prerequisites
 
-- Docker Desktop / Engine
+- Docker Desktop / Engine (macOS, Windows, or Linux)
 - Node.js + npm (for dashboard; `start.sh` runs `npm install` if needed)
 - Internet (Wikimedia SSE + first Spark run downloads Kafka connector JARs)
-- On Windows Git Bash: `export MSYS_NO_PATHCONV=1` is set in scripts (paths with spaces)
+- Bash in your terminal (`bash scripts/...`)
+
+Check your machine:
+
+```bash
+bash scripts/check-prerequisites.sh
+```
 
 Optional: `cp .env.example .env` — topic and Kafka settings.
+
+### macOS
+
+The same commands work in **Terminal** or iTerm. Recommended:
+
+- Use **`bash scripts/run-producer-docker.sh`** for Kafka ingest (no `/etc/hosts` change).
+- **Apple Silicon**: course images may run under emulation; first Spark start can take longer.
+- **Native Python** (optional): use **Python 3.11** (`brew install python@3.11`). `kafka-python` is unreliable on 3.12+. If you run the producer on the host, add `127.0.0.1 kafka-server` to `/etc/hosts`.
+
+### Windows
+
+Use **Git Bash** from the repo root. Scripts disable MSYS path rewriting automatically when needed (paths with spaces in the project folder are supported).
 
 ## Project layout
 
@@ -49,6 +67,7 @@ Optional: `cp .env.example .env` — topic and Kafka settings.
 ## Common commands
 
 ```bash
+bash scripts/check-prerequisites.sh          # Docker + containers (optional)
 bash scripts/setup.sh                        # topic + HDFS lookup + Hive tables
 bash scripts/run-producer-docker.sh          # Terminal 1
 bash scripts/run-spark-streaming-hive.sh     # Terminal 2
