@@ -18,6 +18,7 @@
 #   HIVE_BY_WIKI_PATH        default: hdfs://localhost:9000/user/hive/warehouse/wiki_pulse.db/wiki_pulse_by_wiki
 #   HIVE_BY_PROJECT_FAMILY_PATH default: hdfs://localhost:9000/user/hive/warehouse/wiki_pulse.db/wiki_pulse_by_project_family
 #   STATIC_WIKI_LOOKUP_PATH  default: hdfs://localhost:9000/tmp/wiki-pulse/static/wiki_project_lookup.csv
+#   SKIP_HDFS_REPAIR_CHECK   default: false; set to 1 to skip auto-repair
 
 set -euo pipefail
 export MSYS_NO_PATHCONV=1
@@ -42,14 +43,24 @@ if ! docker inspect kafka-server >/dev/null 2>&1; then
   exit 1
 fi
 
-APP_SRC="${ROOT}/spark-streaming/wiki_recentchange_hive.scala"
+HIVE_JOB_DIR="${ROOT}/spark-streaming/wiki_recentchange_hive"
 APP_DEST_DIR="/tmp/final-project/spark-streaming"
 APP_DEST="${APP_DEST_DIR}/wiki_recentchange_hive.scala"
+HIVE_PARTS=(
+  01_imports_config.scala
+  02_lookup.scala
+  03_kafka_parse.scala
+  04_aggregates.scala
+  05_writes.scala
+)
 
-if [[ ! -f "${APP_SRC}" ]]; then
-  echo "ERROR: Spark script not found: ${APP_SRC}"
-  exit 1
-fi
+for part in "${HIVE_PARTS[@]}"; do
+  fragment="${HIVE_JOB_DIR}/${part}"
+  if [[ ! -f "${fragment}" ]]; then
+    echo "ERROR: Spark Hive job fragment not found: ${fragment}"
+    exit 1
+  fi
+done
 
 KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS:-kafka-server:9092}"
 KAFKA_TOPIC_RAW="${KAFKA_TOPIC_RAW:-bdt-wikimedia-recentchange}"
@@ -66,14 +77,24 @@ HIVE_BY_PROJECT_FAMILY_PATH="${HIVE_BY_PROJECT_FAMILY_PATH:-hdfs://localhost:900
 STATIC_WIKI_LOOKUP_PATH="${STATIC_WIKI_LOOKUP_PATH:-hdfs://localhost:9000/tmp/wiki-pulse/static/wiki_project_lookup.csv}"
 SPARK_KAFKA_PACKAGE="${SPARK_KAFKA_PACKAGE:-org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2}"
 
+if [[ "${SKIP_HDFS_REPAIR_CHECK:-0}" != "1" ]]; then
+  echo "Checking generated HDFS state before Spark starts..."
+  bash scripts/repair-hdfs-state.sh --auto
+fi
+
 echo "Ensuring Hive tables exist..."
 bash scripts/create-hive-tables.sh
 
 echo "Ensuring static wiki lookup exists on HDFS..."
 bash scripts/upload-static-wiki-lookup.sh
 
-echo "Copying Spark Hive job into cs523bdt-lab: ${APP_DEST}"
-docker exec -i cs523bdt-lab bash -lc "mkdir -p '${APP_DEST_DIR}' && cat > '${APP_DEST}'" < "${APP_SRC}"
+echo "Assembling Spark Hive job from ${HIVE_JOB_DIR} into cs523bdt-lab: ${APP_DEST}"
+{
+  for part in "${HIVE_PARTS[@]}"; do
+    cat "${HIVE_JOB_DIR}/${part}"
+    printf '\n'
+  done
+} | docker exec -i cs523bdt-lab bash -lc "mkdir -p '${APP_DEST_DIR}' && cat > '${APP_DEST}'"
 
 echo "Starting Spark Structured Streaming Hive job..."
 echo "  topic: ${KAFKA_TOPIC_RAW}"

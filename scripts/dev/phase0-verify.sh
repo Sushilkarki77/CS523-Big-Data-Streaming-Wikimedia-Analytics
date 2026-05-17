@@ -40,4 +40,4 @@ curl -s -o /dev/null -w "9870 NameNode HTTP: %{http_code}\n" --connect-timeout 3
 curl -s -o /dev/null -w "8088 YARN RM HTTP: %{http_code}\n" --connect-timeout 3 http://127.0.0.1:8088/ || true
 
 echo ""
-echo "Phase 0 script finished. See docs/phase0-inventory.md for advertised listener / hosts notes."
+echo "Phase 0 script finished. See docs/archive/phase0-inventory.md for advertised listener / hosts notes."

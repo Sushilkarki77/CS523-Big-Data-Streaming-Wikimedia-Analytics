@@ -2,7 +2,7 @@
 # Run the Phase 3 Spark Structured Streaming console job inside cs523bdt-lab.
 #
 # Usage:
-#   bash scripts/run-spark-streaming-console.sh
+#   bash scripts/dev/run-spark-streaming-console.sh
 #
 # Optional environment variables:
 #   KAFKA_BOOTSTRAP_SERVERS  default: kafka-server:9092
@@ -17,7 +17,7 @@
 set -euo pipefail
 export MSYS_NO_PATHCONV=1
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
 if [[ -f "${ROOT}/.env" ]]; then
@@ -37,7 +37,7 @@ if ! docker inspect kafka-server >/dev/null 2>&1; then
   exit 1
 fi
 
-APP_SRC="${ROOT}/spark-streaming/wiki_recentchange_console.scala"
+APP_SRC="${ROOT}/spark-streaming/dev/wiki_recentchange_console.scala"
 APP_DEST_DIR="/tmp/final-project/spark-streaming"
 APP_DEST="${APP_DEST_DIR}/wiki_recentchange_console.scala"
 

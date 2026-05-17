@@ -5,7 +5,7 @@
 set -euo pipefail
 export MSYS_NO_PATHCONV=1
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
 NET="$(docker inspect kafka-server --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' 2>/dev/null || true)"

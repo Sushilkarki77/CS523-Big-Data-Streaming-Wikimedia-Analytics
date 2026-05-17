@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Start the full manual demo flow in the background:
-#   Wikimedia -> Producer -> Kafka -> Spark/Hive (+ HDFS static join) -> CSV export -> Node API -> React UI
+# Start the full pipeline in the background:
+#   Wikimedia -> Producer -> Kafka -> Spark/Hive -> CSV export -> Node API -> React UI
 #
 # Usage:
-#   bash scripts/start-demo.sh
+#   bash scripts/start.sh
 #
-# Logs/PIDs are written under .demo/.
+# Logs/PIDs are written under .run/.
 
 set -euo pipefail
 export MSYS_NO_PATHCONV=1
@@ -13,10 +13,10 @@ export MSYS_NO_PATHCONV=1
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-DEMO_DIR="${ROOT}/.demo"
-LOG_DIR="${DEMO_DIR}/logs"
-PID_DIR="${DEMO_DIR}/pids"
-EXPORT_INTERVAL_SECONDS="${EXPORT_INTERVAL_SECONDS:-60}"
+RUN_DIR="${ROOT}/.run"
+LOG_DIR="${RUN_DIR}/logs"
+PID_DIR="${RUN_DIR}/pids"
+EXPORT_INTERVAL_SECONDS="${EXPORT_INTERVAL_SECONDS:-120}"
 
 mkdir -p "$LOG_DIR" "$PID_DIR"
 
@@ -64,9 +64,7 @@ required_container hive-metastore-db
 
 echo ""
 echo "== One-time setup =="
-bash scripts/create-project-topic.sh
-bash scripts/upload-static-wiki-lookup.sh
-bash scripts/create-hive-tables.sh
+bash scripts/setup.sh
 
 echo ""
 echo "== Installing dashboard dependencies if needed =="
@@ -83,15 +81,15 @@ else
 fi
 
 echo ""
-echo "== Starting long-running demo processes =="
+echo "== Starting long-running processes =="
 start_background "producer" "cd '$ROOT' && bash scripts/run-producer-docker.sh"
 start_background "spark-hive" "cd '$ROOT' && bash scripts/run-spark-streaming-hive.sh"
-start_background "hive-exporter" "cd '$ROOT' && while true; do bash scripts/export-hive-dashboard-data.sh; sleep '${EXPORT_INTERVAL_SECONDS}'; done"
+start_background "hive-exporter" "cd '$ROOT' && EXPORT_INTERVAL_SECONDS='${EXPORT_INTERVAL_SECONDS}' bash scripts/export-hive-dashboard-loop.sh"
 start_background "dashboard-api" "cd '$ROOT/dashboard-react/backend' && npm run dev"
 start_background "dashboard-ui" "cd '$ROOT/dashboard-react/frontend' && npm run dev"
 
 echo ""
-echo "Demo is starting. Give Spark/Hive and the exporter a minute or two to produce fresh rows."
+echo "Pipeline is starting. Give Spark/Hive and the exporter a minute or two to produce fresh rows."
 echo ""
 echo "Open:"
 echo "  React dashboard: http://localhost:5173"
@@ -100,5 +98,6 @@ echo ""
 echo "Logs:"
 echo "  ${LOG_DIR}"
 echo ""
-echo "Stop demo processes with:"
-echo "  bash scripts/stop-demo.sh"
+echo "Stop background processes:"
+echo "  bash scripts/stop.sh"
+echo "  bash scripts/stop-everything.sh   # includes manual terminals"

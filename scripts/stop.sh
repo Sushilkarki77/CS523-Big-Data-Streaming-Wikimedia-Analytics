@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Stop processes started by scripts/start-demo.sh.
+# Stop processes started by scripts/start.sh.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DEMO_DIR="${ROOT}/.demo"
-PID_DIR="${DEMO_DIR}/pids"
+RUN_DIR="${ROOT}/.run"
+PID_DIR="${RUN_DIR}/pids"
 
 if [[ ! -d "$PID_DIR" ]]; then
-  echo "No demo PID directory found: ${PID_DIR}"
+  echo "No PID directory found: ${PID_DIR}"
   exit 0
 fi
 
@@ -35,6 +35,5 @@ for pid_file in "$PID_DIR"/*.pid; do
 done
 
 echo ""
-echo "Stopped demo-managed host processes."
-echo "If Spark is still visible in the lab container, stop it manually with Ctrl+C in its terminal or inspect with:"
-echo "  docker exec cs523bdt-lab bash -lc 'jps'"
+echo "Stopped background host processes."
+echo "For full cleanup (manual terminals + Spark in lab): bash scripts/stop-everything.sh"

@@ -51,6 +51,8 @@ if [[ -t 0 && -t 1 ]]; then
 fi
 
 exec docker run --rm "${DOCKER_TTY[@]}" \
+  --label wiki-pulse.project=final-project \
+  --label wiki-pulse.component=producer \
   -v "${ROOT}:/app" -w /app \
   --network "${NET}" \
   "${ENV_ARGS[@]}" \
