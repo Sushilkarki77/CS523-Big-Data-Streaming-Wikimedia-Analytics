@@ -10,4 +10,5 @@
 **/dist/
 dashboard-react/backend/data/*.csv
 dashboard-react/backend/data/*.tmp
-.demo/
+dashboard-react/backend/data/.hive-errors/
+.run/

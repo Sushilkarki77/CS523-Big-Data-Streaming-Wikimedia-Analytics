@@ -222,8 +222,8 @@ Relevant files:
 
 - `producer/wikimedia_kafka_producer.py`: reads Wikimedia SSE and writes Kafka JSON.
 - `docs/kafka-message-contract.md`: defines the Kafka message schema.
-- `spark-streaming/wiki_recentchange_console.scala`: reads Kafka and produces Phase 3 console metrics.
-- `spark-streaming/wiki_recentchange_hive.scala`: writes Hive metrics and performs the bonus HDFS CSV join.
+- `spark-streaming/dev/wiki_recentchange_console.scala`: optional console validation (no Hive).
+- `spark-streaming/wiki_recentchange_hive/`: writes Hive metrics and performs the bonus HDFS CSV join (Scala fragments assembled by `scripts/run-spark-streaming-hive.sh`).
 - `static-data/wiki_project_lookup.csv`: static lookup uploaded to HDFS for the bonus join.
 - `sql/hive/create_wiki_pulse_tables.sql`: Hive table DDL.
 - `scripts/export-hive-dashboard-data.sh`: exports Hive results to dashboard CSV snapshots.

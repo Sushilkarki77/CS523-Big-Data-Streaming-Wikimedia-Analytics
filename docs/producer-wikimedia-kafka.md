@@ -1,9 +1,20 @@
-# `wikimedia_kafka_producer.py` — reference
+# Wikimedia Kafka producer — reference
 
 Python producer that reads **Wikimedia EventStreams** (HTTP **SSE**) and publishes **JSON** messages to Kafka according to **`kafka-message-contract.md`**.
 
 **Run:** `python producer/wikimedia_kafka_producer.py`  
 **Dependencies:** `producer/requirements.txt` (`kafka-python`, `python-dotenv`)
+
+## Source layout
+
+| Module | Role |
+|--------|------|
+| `wikimedia_kafka_producer.py` | CLI entry (`--limit`, `--stream-url`) |
+| `config.py` | Constants, `.env`, logging |
+| `contract.py` | `map_to_contract`, `event_time_iso` |
+| `sse.py` | `iter_sse_events` (HTTP SSE reader) |
+| `kafka_sink.py` | `make_producer` |
+| `runner.py` | Reconnect loop and publish |
 
 ---
 
@@ -157,7 +168,7 @@ Two helper scripts attach a **`python:3.11-slim-bookworm`** container to the **s
 
 | Script | Purpose |
 |--------|---------|
-| **`scripts/verify-producer.sh`** `[N]` | Smoke test: publishes **`N`** messages (default **5**), then runs **`kafka-console-consumer`** for **`N`** lines. Always passes **`--limit`**. |
+| **`scripts/dev/verify-producer.sh`** `[N]` | Smoke test: publishes **`N`** messages (default **5**), then runs **`kafka-console-consumer`** for **`N`** lines. Always passes **`--limit`**. |
 | **`scripts/run-producer-docker.sh`** `[N]` | Continuous run: **omit** `N` to stream until **Ctrl+C**; optional **`N`** same as **`--limit`** for short tests. |
 
 **Configuration inside the container**
@@ -171,4 +182,4 @@ Two helper scripts attach a **`python:3.11-slim-bookworm`** container to the **s
 ## Related documentation
 
 - **`docs/kafka-message-contract.md`** — field definitions consumed downstream  
-- **`README.md`** — Phase 2: host run, **`verify-producer.sh`**, **`run-producer-docker.sh`**
+- **`README.md`** / **`DEMO.md`** — run producer via **`run-producer-docker.sh`**; optional **`scripts/dev/verify-producer.sh`**

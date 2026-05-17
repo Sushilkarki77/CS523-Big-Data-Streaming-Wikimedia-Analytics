@@ -1,47 +1,46 @@
 # React dashboard
 
-Custom dashboard for the final project:
-
 ```text
 Hive tables -> CSV snapshot export -> Node API -> React charts
 ```
 
-This avoids HiveServer2/JDBC. Hive remains the source of truth; the exporter periodically snapshots Hive query results into CSV files that the Node API serves as JSON.
+Hive is the source of truth. The exporter snapshots Hive query results into CSV files that the Node API serves as JSON (no HiveServer2/JDBC).
 
 ## Files
 
 | Path | Purpose |
 |------|---------|
-| `backend/` | Express API that reads CSV files and exposes JSON endpoints. |
-| `frontend/` | Vite React app with metric cards and charts. |
-| `backend/data/` | Generated CSV snapshots from Hive. |
-| `../scripts/export-hive-dashboard-data.sh` | Hive CLI exporter for dashboard CSV snapshots. |
+| `backend/` | Express API (reads CSV snapshots) |
+| `frontend/` | Vite React app |
+| `backend/data/` | Generated CSVs (gitignored) |
+| `../scripts/export-hive-dashboard-data.sh` | One-shot Hive → CSV export |
+| `../scripts/export-hive-dashboard-loop.sh` | Continuous export (default every 120s) |
 
 ## Install
 
 ```bash
-cd dashboard-react/backend
-npm install
-
-cd ../frontend
-npm install
+cd dashboard-react/backend && npm install
+cd ../frontend && npm install
 ```
 
 ## Export Hive snapshots
 
-Run once:
+One shot:
 
 ```bash
 bash scripts/export-hive-dashboard-data.sh
 ```
 
-Run continuously while demoing:
+Continuous (recommended):
 
 ```bash
-while true; do
-  bash scripts/export-hive-dashboard-data.sh
-  sleep 30
-done
+bash scripts/export-hive-dashboard-loop.sh
+```
+
+Or set interval:
+
+```bash
+EXPORT_INTERVAL_SECONDS=60 bash scripts/export-hive-dashboard-loop.sh
 ```
 
 Generated files:
@@ -64,12 +63,9 @@ API:
 ```text
 http://localhost:4000/api/health
 http://localhost:4000/api/dashboard
-http://localhost:4000/api/throughput
-http://localhost:4000/api/top-wikis
-http://localhost:4000/api/project-families
 ```
 
-If exported CSVs do not exist yet, the API falls back to `sample-data/` so the UI can still load.
+If CSVs are missing, the API falls back to `sample-data/`.
 
 ## Run frontend
 
@@ -78,25 +74,22 @@ cd dashboard-react/frontend
 npm run dev
 ```
 
-Open the Vite URL, usually:
+Open http://localhost:5173
 
-```text
-http://localhost:5173
-```
-
-Optional frontend variables:
+Optional:
 
 ```bash
 VITE_API_BASE_URL=http://localhost:4000 VITE_REFRESH_MS=15000 npm run dev
 ```
 
-## Demo run order
+## Run order
+
+See **[README.md](../README.md)**. Short version:
 
 1. `bash scripts/run-producer-docker.sh`
-2. `bash scripts/upload-static-wiki-lookup.sh`
-3. `bash scripts/run-spark-streaming-hive.sh`
-4. `while true; do bash scripts/export-hive-dashboard-data.sh; sleep 30; done`
-5. `cd dashboard-react/backend && npm run dev`
-6. `cd dashboard-react/frontend && npm run dev`
+2. `bash scripts/run-spark-streaming-hive.sh`
+3. `bash scripts/export-hive-dashboard-loop.sh`
+4. `cd dashboard-react/backend && npm run dev`
+5. `cd dashboard-react/frontend && npm run dev`
 
-The Project Families chart is the bonus view: Spark joins the live stream to the static HDFS CSV lookup and groups by `project_family`.
+The Project Families chart uses Spark’s broadcast join to the static HDFS lookup.

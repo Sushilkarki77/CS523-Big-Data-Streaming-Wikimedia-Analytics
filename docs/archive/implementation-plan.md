@@ -149,7 +149,7 @@ Node/Express API -> React dashboard
 
 - **`sql/hive/create_wiki_pulse_tables.sql`** — creates the `wiki_pulse` database plus three non-partitioned Parquet Hive tables.
 - **`scripts/create-hive-tables.sh`** — runs the DDL with Hive CLI inside `cs523bdt-lab`.
-- **`spark-streaming/wiki_recentchange_hive.scala`** — writes the same Spark aggregates to Hive.
+- **`spark-streaming/wiki_recentchange_hive/`** — writes the same Spark aggregates to Hive (fragments concatenated at runtime).
 - **`scripts/run-spark-streaming-hive.sh`** — runs the Hive writer. HiveServer2 is not required for CLI verification.
 
 **Exit criteria**
@@ -197,7 +197,7 @@ Node/Express API -> React dashboard
 
 - **`static-data/wiki_project_lookup.csv`** — static wiki metadata keyed by `wiki`.
 - **`scripts/upload-static-wiki-lookup.sh`** — uploads the lookup to HDFS at `/tmp/wiki-pulse/static/wiki_project_lookup.csv`.
-- **`spark-streaming/wiki_recentchange_hive.scala`** — reads the HDFS CSV, broadcasts it, joins streaming events by `wiki`, and writes `wiki_pulse_by_project_family`.
+- **`spark-streaming/wiki_recentchange_hive/`** — reads the HDFS CSV, broadcasts it, joins streaming events by `wiki`, and writes `wiki_pulse_by_project_family`.
 - **`dashboard-react/frontend/`** — displays the bonus project-family aggregate.
 
 **Exit criteria**
